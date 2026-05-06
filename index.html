@@ -1,10 +1,10 @@
 <!DOCTYPE html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,user-scalable=no"><meta name=theme-color content=#000><link rel=manifest href=manifest.json><title>NextTrain</title><style>
-:root{--bg:#fff;--fg:#000;--gray:#888;--light:#ddd;--green:#008000;--red:#c00}
-body.dk{--bg:#000;--fg:#fff;--gray:#aaa;--light:#333;--green:#0f0;--red:#f33}
+:root{--bg:#fff;--fg:#000;--gray:#888;--light:#ddd;--green:#008000;--red:#c00;--bnr:#000;--bnrf:#fff}
+body.dk{--bg:#000;--fg:#fff;--gray:#aaa;--light:#333;--green:#0f0;--red:#f33;--bnr:#fff;--bnrf:#000}
 *{box-sizing:border-box}
 body{margin:0;font:16px system-ui,sans-serif;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent}
 #a{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-header{background:var(--fg);color:var(--bg);padding:8px;text-align:center;font-weight:900;letter-spacing:1px;cursor:pointer;z-index:10;font-size:1.2rem}
+header{background:var(--bnr);color:var(--bnrf);padding:8px;text-align:center;font-weight:900;letter-spacing:1px;cursor:pointer;z-index:10;font-size:1.2rem;transition:background 0.2s}
 .nav{display:flex;align-items:center;background:var(--bg);border-bottom:1px solid var(--light);min-height:44px;padding:0 8px}
 .nav h2{margin:0;font-size:1rem;flex:1;text-align:center;font-weight:700;color:var(--fg)}
 .nav button{background:none;border:none;color:var(--fg);font-size:1.5rem;padding:0 8px;cursor:pointer;width:40px}
@@ -43,11 +43,11 @@ input{background:var(--light);color:var(--fg);border:1px solid var(--light);padd
 </div>
 <script>
 const W='https://nt.sloccy.workers.dev',C='nt_s',F='nt_f',T='nt_t',R='nt_r',e=i=>document.getElementById(i),t=new TextDecoder;
-let S=[],f=JSON.parse(localStorage.getItem(F)||'[]'),dk=localStorage.getItem(T)=='1',ed=0,stk=[],cache={};
+let S=[],f=JSON.parse(localStorage.getItem(F)||'[]'),rs=JSON.parse(localStorage.getItem(R)||'null'),dk=localStorage.getItem(T)=='1',ed=0,stk=[],cache={};
 
 if(dk)document.body.classList.add('dk');
 
-const api=async p=>{e('b').style.display='block';try{const r=await fetch(W+p);return {b:new Uint8Array(await r.arrayBuffer()),h:r.headers}}finally{e('b').style.display='none'}};
+const api=async p=>{e('b').style.display='block';try{const r=await fetch(W+p);return {b:new Uint8Array(await r.arrayBuffer()),h:r.headers}}catch(err){console.error(err);throw err}finally{e('b').style.display='none'}};
 const ps=b=>{let p=6,c=b[4]|b[5]<<8,res=[];for(let i=0;i<c;i++){let l=b[p++],s=t.decode(b.subarray(p,p+l));p+=l;let rc=b[p++],rs=[];for(let j=0;j<rc;j++){let r=b[p++],g=b[p++],bl=b[p++],rl=b[p++],rn=t.decode(b.subarray(p,p+rl));p+=rl;let d=String.fromCharCode(b[p++]),hl=b[p++],h=t.decode(b.subarray(p,p+hl));p+=hl;rs.push({c:`rgb(${r},${g},${bl})`,n:rn,d,h})}res.push({s,r:rs,n:s.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())})}return res};
 
 const go=(v,p)=>{stk.push({v,p});render()};
@@ -100,8 +100,8 @@ const render=()=>{
   const L=e('L');L.innerHTML='';
   
   if(v=='home'){
-    const rs=JSON.parse(localStorage.getItem(R)||'null');
-    if(f.length) L.innerHTML='<div class=sec>FAVORITES</div>';
+    rs=JSON.parse(localStorage.getItem(R)||'null');
+    if(f.length) L.insertAdjacentHTML('beforeend','<div class=sec>FAVORITES</div>');
     f.forEach((fav,i)=>{
       const s=S.find(x=>x.s==fav.s);
       const div=document.createElement('div');div.className='i';
@@ -132,12 +132,14 @@ const render=()=>{
     const box=document.createElement('div');box.className='sb';
     box.innerHTML=`<input id=si placeholder="Search stations..." value="${p.q||''}">`;
     L.appendChild(box);
-    const input=e('si');input.focus();
+    const input=e('si');setTimeout(()=>input.focus(),50);
     input.oninput=()=>{p.q=input.value.toLowerCase();renderList()};
     const listDiv=document.createElement('div');L.appendChild(listDiv);
     const renderList=()=>{
       listDiv.innerHTML='';
-      S.filter(s=>s.n.toLowerCase().includes(p.q)).forEach(s=>{
+      const filtered=S.filter(s=>s.n.toLowerCase().includes(p.q));
+      if(!filtered.length) listDiv.innerHTML='<div class=p>No stations found</div>';
+      filtered.forEach(s=>{
         const div=document.createElement('div');div.className='i';
         div.innerHTML=`<div class=tx><div class=t1>${s.n}</div></div>`;
         div.onclick=()=>go('routes',{s,sel:[]});
@@ -160,7 +162,9 @@ const render=()=>{
       ok.onclick=()=>{
         const dm={N:'0',S:'1',E:'2',W:'3'};
         const rp=p.sel.map(i=>p.s.r[i].n[0]+dm[p.s.r[i].d]).join('');
-        localStorage.setItem(R,JSON.stringify({s:p.s.s,r:rp,routes:p.sel.map(i=>({r:p.s.r[i].n[0],d:dm[p.s.r[i].d]}))}));
+        const rss={s:p.s.s,r:rp,routes:p.sel.map(i=>({r:p.s.r[i].n[0],d:dm[p.s.r[i].d]}))};
+        localStorage.setItem(R,JSON.stringify(rss));
+        rs=rss;
         go('arrivals',{s:p.s,r:rp});
       };
       L.appendChild(ok);
@@ -174,7 +178,7 @@ const render=()=>{
     listCont.innerHTML='<div class=p>...</div>';
     (async()=>{
       try {
-        const {b,h}=await api('/a?s='+p.s.s+'&r='+rParam);
+        const {b}=await api('/a?s='+p.s.s+'&r='+rParam);
         listCont.innerHTML='';
         if(!isF){
           const addBtn=document.createElement('div');addBtn.className='i act';addBtn.innerText='\u2606 Add Favorite';
@@ -215,13 +219,22 @@ const render=()=>{
 
   if(v=='settings'){
     e('sub').innerText='Settings';
-    L.innerHTML=`<div class=i onclick="dk=!dk;localStorage.setItem(T,dk?1:0);document.body.classList.toggle('dk',dk);render()"><div class=tg><span>Dark Mode</span><div class="chk${dk?' on':''}"></div></div></div><div class="i act" onclick="refreshData()">Refresh Station Data</div>`;
+    const setDiv=document.createElement('div');L.appendChild(setDiv);
+    setDiv.innerHTML=`<div class=i id=dt><div class=tg><span>Dark Mode</span><div class="chk${dk?' on':''}"></div></div></div><div class="i act" id=rf>Refresh Station Data</div>`;
+    e('dt').onclick=()=>{
+      dk=!dk;
+      localStorage.setItem(T,dk?1:0);
+      document.body.classList.toggle('dk',dk);
+      render();
+    };
+    e('rf').onclick=async()=>{
+      try{const {b}=await api('/s');S=ps(b);localStorage.setItem(C,JSON.stringify([...b]));alert('OK')}catch(e){alert('Err')}
+    };
   }
 };
 
 window.move=(i,d)=>{const n=i+d;if(n>=0&&n<f.length){[f[i],f[n]]=[f[n],f[i]];localStorage.setItem(F,JSON.stringify(f));render()}};
 window.ren=(i)=>{const n=prompt('Name?',f[i].n||f[i].s);if(n){f[i].n=n;localStorage.setItem(F,JSON.stringify(f));render()}};
-window.refreshData=async()=>{e('b').style.display='block';try{const {b}=await api('/s');S=ps(b);localStorage.setItem(C,JSON.stringify([...b]));alert('OK')}catch(e){alert('Err')}e('b').style.display='none'};
 
 const fetchSub=async(fav)=>{
   try{
