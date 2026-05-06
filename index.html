@@ -27,6 +27,8 @@ header button{background:none;border:none;color:var(--fg);font-size:1.5rem;paddi
 .st.red{color:var(--red)}
 .hs{font-size:14px;color:var(--gray)}
 #b{position:fixed;top:0;left:0;right:0;height:2px;background:#29f;display:none;z-index:9}
+input{background:#f0f0f0;color:var(--fg);border:1px solid var(--light);padding:8px;border-radius:4px;width:100%;font-size:16px}
+.sb{padding:10px;border-bottom:1px solid var(--light)}
 </style>
 <div id=b></div>
 <div id=a>
@@ -74,18 +76,31 @@ const render=()=>{
       L.appendChild(div);
     });
     const add=document.createElement('div');add.className='i act';add.innerText='+ New Search';
-    add.onclick=()=>go('picker');L.appendChild(add);
+    add.onclick=()=>go('picker',{q:''});L.appendChild(add);
   }
   
   if(v=='picker'){
     e('h').innerText='Select Station';
-    if(!S.length) L.innerHTML='<div class=p>Loading stations...</div>';
-    S.forEach(s=>{
-      const div=document.createElement('div');div.className='i';
-      div.innerHTML=`<div class=tx><div class=t1>${s.n}</div></div>`;
-      div.onclick=()=>go('routes',{s,sel:[]});
-      L.appendChild(div);
-    });
+    const box=document.createElement('div');box.className='sb';
+    box.innerHTML=`<input id=si placeholder="Search stations..." value="${p.q||''}">`;
+    L.appendChild(box);
+    const input=e('si');
+    input.focus();
+    input.oninput=()=>{p.q=input.value.toLowerCase();renderList()};
+    
+    const listDiv=document.createElement('div');L.appendChild(listDiv);
+    const renderList=()=>{
+      listDiv.innerHTML='';
+      const filtered=S.filter(s=>s.n.toLowerCase().includes(p.q)||s.s.includes(p.q));
+      if(!filtered.length) listDiv.innerHTML='<div class=p>No stations found</div>';
+      filtered.forEach(s=>{
+        const div=document.createElement('div');div.className='i';
+        div.innerHTML=`<div class=tx><div class=t1>${s.n}</div></div>`;
+        div.onclick=()=>go('routes',{s,sel:[]});
+        listDiv.appendChild(div);
+      });
+    };
+    renderList();
   }
   
   if(v=='routes'){
@@ -111,11 +126,28 @@ const render=()=>{
   if(v=='arrivals'){
     e('h').innerText=p.s.n;
     const rParam=p.fav?p.fav.r:p.r;
-    L.innerHTML='<div class=p>...</div>';
+    const isF=f.find(x=>x.s==p.s.s&&x.r==rParam);
+    
+    const listCont=document.createElement('div');L.appendChild(listCont);
+    listCont.innerHTML='<div class=p>...</div>';
+    
     (async()=>{
       try {
         const {b,h}=await api('/a?s='+p.s.s+'&r='+rParam);
-        L.innerHTML='';
+        listCont.innerHTML='';
+        
+        // Add favorite button at TOP if NOT favorited
+        if(!isF){
+          const addBtn=document.createElement('div');addBtn.className='i act';
+          addBtn.innerText='\u2606 Add Favorite';
+          addBtn.onclick=()=>{
+            f.push({s:p.s.s,r:rParam,n:p.s.n});
+            localStorage.setItem(F,JSON.stringify(f));
+            stk=[{v:'home'}];render();
+          };
+          listCont.appendChild(addBtn);
+        }
+
         let ptr=1;
         for(let i=0;i<b[0];i++){
           let rl=b[ptr++],rn=t.decode(b.subarray(ptr,ptr+rl));ptr+=rl;
@@ -130,21 +162,22 @@ const render=()=>{
           if(i==0) cache[p.s.s+rParam]=`Next: ${timeStr} (${rn})`;
           const div=document.createElement('div');div.className='ar';
           div.innerHTML=`<div class=ar-l>${drawRic(x,44)}<div class=tx><div class=hs>${x.h}</div><div class="st ${cls}">${lbl}</div></div></div><div class=ar-r><div class=tm>${timeStr}</div><div class=hs>${rn}</div></div>`;
-          L.appendChild(div);
+          listCont.appendChild(div);
         }
-        if(!b[0])L.innerHTML='<div class=p>No arrivals</div>';
+        if(!b[0])listCont.insertAdjacentHTML('beforeend','<div class=p>No arrivals</div>');
         
-        const isF=f.find(x=>x.s==p.s.s&&x.r==rParam);
-        const favAct=document.createElement('div');favAct.className='i act';
-        favAct.innerText=isF?'\u2605 Remove Favorite':'\u2606 Add Favorite';
-        favAct.onclick=()=>{
-          if(isF) f=f.filter(x=>!(x.s==p.s.s&&x.r==rParam));
-          else f.push({s:p.s.s,r:rParam,n:p.s.n});
-          localStorage.setItem(F,JSON.stringify(f));
-          if(!isF) {stk=[{v:'home'}];render()} else render();
-        };
-        L.appendChild(favAct);
-      } catch(e) { L.innerHTML='<div class=p>Error loading arrivals</div>' }
+        // Remove favorite button at BOTTOM if already favorited
+        if(isF){
+          const remBtn=document.createElement('div');remBtn.className='i act';
+          remBtn.innerText='\u2605 Remove Favorite';
+          remBtn.onclick=()=>{
+            f=f.filter(x=>!(x.s==p.s.s&&x.r==rParam));
+            localStorage.setItem(F,JSON.stringify(f));
+            render();
+          };
+          listCont.appendChild(remBtn);
+        }
+      } catch(e) { listCont.innerHTML='<div class=p>Error loading arrivals</div>' }
     })();
   }
 };
