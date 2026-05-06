@@ -12,7 +12,6 @@ header button{background:none;border:none;color:var(--fg);font-size:1.5rem;paddi
 .i{padding:12px;border-bottom:1px solid var(--light);display:flex;align-items:center;min-height:56px}
 .i:active{background:rgba(128,128,128,0.1)}
 .ic{width:44px;height:44px;position:relative;margin-right:12px;flex-shrink:0}
-.ric{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;border:1px solid rgba(0,0,0,0.1)}
 .tx{flex:1;overflow:hidden}
 .t1{font-weight:700;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .t2{font-size:14px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -31,82 +30,99 @@ header button{background:none;border:none;color:var(--fg);font-size:1.5rem;paddi
 input{background:var(--light);color:var(--fg);border:1px solid var(--light);padding:8px;border-radius:4px;width:100%;font-size:16px}
 .sb{padding:10px;border-bottom:1px solid var(--light)}
 .tg{display:flex;align-items:center;justify-content:space-between;width:100%}
+.sec{background:var(--light);padding:4px 12px;font-size:12px;font-weight:700;color:var(--gray)}
+.ed{display:flex;gap:8px;margin-left:8px}
+.ed b{padding:4px 8px;border:1px solid var(--light);border-radius:4px;font-size:14px}
 </style>
 <div id=b></div>
 <div id=a>
-<header><button id=back style="visibility:hidden">&lsaquo;</button><h1 id=h>NextTrain</h1><div style="width:40px"></div></header>
+<header><button id=back style="visibility:hidden">&lsaquo;</button><h1 id=h>NextTrain</h1><button id=eb>&vellip;</button></header>
 <div id=L></div>
 </div>
 <script>
-const W='https://nt.sloccy.workers.dev',C='nt_s',F='nt_f',T='nt_t',e=i=>document.getElementById(i),t=new TextDecoder;
-let S=[],f=JSON.parse(localStorage.getItem(F)||'[]'),dk=localStorage.getItem(T)=='1',stk=[],cache={};
+const W='https://nt.sloccy.workers.dev',C='nt_s',F='nt_f',T='nt_t',R='nt_r',e=i=>document.getElementById(i),t=new TextDecoder;
+let S=[],f=JSON.parse(localStorage.getItem(F)||'[]'),rs=JSON.parse(localStorage.getItem(R)||'null'),dk=localStorage.getItem(T)=='1',ed=0,stk=[],cache={};
 
 if(dk)document.body.classList.add('dk');
 
 const api=async p=>{e('b').style.display='block';try{const r=await fetch(W+p);return {b:new Uint8Array(await r.arrayBuffer()),h:r.headers}}finally{e('b').style.display='none'}};
-const ps=b=>{let p=6,c=b[4]|b[5]<<8,R=[];for(let i=0;i<c;i++){let l=b[p++],s=t.decode(b.subarray(p,p+l));p+=l;let rc=b[p++],rs=[];for(let j=0;j<rc;j++){let r=b[p++],g=b[p++],bl=b[p++],rl=b[p++],rn=t.decode(b.subarray(p,p+rl));p+=rl;let d=String.fromCharCode(b[p++]),hl=b[p++],h=t.decode(b.subarray(p,p+hl));p+=hl;rs.push({c:`rgb(${r},${g},${bl})`,n:rn,d,h})}R.push({s,r:rs,n:s.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())})}return R};
+const ps=b=>{let p=6,c=b[4]|b[5]<<8,res=[];for(let i=0;i<c;i++){let l=b[p++],s=t.decode(b.subarray(p,p+l));p+=l;let rc=b[p++],rs=[];for(let j=0;j<rc;j++){let r=b[p++],g=b[p++],bl=b[p++],rl=b[p++],rn=t.decode(b.subarray(p,p+rl));p+=rl;let d=String.fromCharCode(b[p++]),hl=b[p++],h=t.decode(b.subarray(p,p+hl));p+=hl;rs.push({c:`rgb(${r},${g},${bl})`,n:rn,d,h})}res.push({s,r:rs,n:s.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())})}return res};
 
 const go=(v,p)=>{stk.push({v,p});render()};
 const pop=()=>{if(stk.length>1){stk.pop();render()}};
 e('back').onclick=pop;
+e('eb').onclick=()=>{ed=!ed;render()};
 
-const drawRic=(r,s=24)=>{return `<div class="ric" style="background:${r.c};width:${s}px;height:${s}px;font-size:${s/2}px">${r.n[0]}</div>`};
+const drawIcon=(s,fav)=>{
+  const n=Math.min(fav.routes?.length||0,4);
+  const cv=document.createElement('canvas');cv.width=cv.height=44;const x=cv.getContext('2d');
+  if(!s||!n)return cv.toDataURL();
+  const rts=fav.routes.map(fr=>{
+    const d={0:'N',1:'S',2:'E',3:'W'};
+    return s.r.find(r=>r.n[0]==fr.r&&r.d==d[fr.d]);
+  }).filter(x=>x);
+  if(!rts.length)return cv.toDataURL();
+
+  const mid=18,ox=4,oy=4,e=35;
+  if(rts.length==1){
+    x.fillStyle=rts[0].c;x.beginPath();x.roundRect(ox,oy,36,36,3);x.fill();
+    x.fillStyle='#fff';x.font='bold 24px system-ui';x.textAlign='center';x.textBaseline='middle';
+    x.fillText(rts[0].n[0],22,23);
+    x.strokeStyle='#000';x.lineWidth=1;x.strokeText(rts[0].n[0],22,23);
+  }else{
+    x.fillStyle='#fff';x.fillRect(ox,oy,36,36);
+    let segs=[0,0,1,1,1,1,0,0]; // 2 routes
+    if(n==3) segs=[0,1,1,2,2,2,2,0];
+    if(n==4) segs=[0,1,1,3,3,2,2,0];
+    const pts=[[ox,oy,ox+mid,oy],[ox+mid,oy,ox+e,oy],[ox+e,oy,ox+e,oy+mid],[ox+e,oy+mid,ox+e,oy+e],[ox+e,oy+e,ox+mid,oy+e],[ox+mid,oy+e,ox,oy+e],[ox,oy+e,ox,oy+mid],[ox,oy+mid,ox,oy]];
+    x.lineWidth=2;
+    segs.forEach((ri,i)=>{x.strokeStyle=rts[ri].c;x.beginPath();x.moveTo(pts[i][0],pts[i][1]);x.lineTo(pts[i][2],pts[i][3]);x.stroke()});
+    x.fillStyle='#000';x.font='bold 14px system-ui';x.textAlign='center';x.textBaseline='middle';
+    const slots=[[ox+9,oy+9],[ox+27,oy+9],[ox+9,oy+27],[ox+27,oy+27]];
+    if(n==2){x.fillText(rts[0].n[0],slots[0][0],slots[0][1]);x.fillText(rts[1].n[0],slots[3][0],slots[3][1])}
+    else if(n==3){x.fillText(rts[0].n[0],slots[0][0],slots[0][1]);x.fillText(rts[1].n[0],slots[1][0],slots[1][1]);x.fillText(rts[2].n[0],22,oy+27)}
+    else{rts.forEach((r,i)=>x.fillText(r.n[0],slots[i][0],slots[i][1]))}
+  }
+  const ds=new Set(fav.routes.map(r=>r.d));
+  x.fillStyle=window.getComputedStyle(document.body).getPropertyValue('--red');
+  const ar=(cx,cy,rot)=>{x.save();x.translate(cx,cy);x.rotate(rot);x.beginPath();x.moveTo(0,-4);x.lineTo(-3,1);x.lineTo(3,1);x.fill();x.strokeStyle='#000';x.lineWidth=0.5;x.stroke();x.restore()};
+  if(ds.has('0'))ar(22,2,0);if(ds.has('1'))ar(22,42,Math.PI);if(ds.has('2'))ar(42,22,Math.PI/2);if(ds.has('3'))ar(2,22,-Math.PI/2);
+  return cv.toDataURL();
+};
 
 const render=()=>{
   const {v,p}=stk[stk.length-1];
   e('back').style.visibility=stk.length>1?'visible':'hidden';
+  e('eb').style.display=(v=='home')?'block':'none';
   const L=e('L');L.innerHTML='';
   
   if(v=='home'){
     e('h').innerText='NextTrain';
-    if(!f.length) L.innerHTML='<div class=p>No favorites yet — tap below</div>';
+    if(f.length) L.innerHTML='<div class=sec>FAVORITES</div>';
     f.forEach((fav,i)=>{
       const s=S.find(x=>x.s==fav.s);
       const div=document.createElement('div');div.className='i';
-      let icons='';
-      if(s){
-        const routes=fav.r.split('').map((c,idx)=>{
-          if(idx%2!=0)return null;
-          const rName=c,dCode=fav.r[idx+1],dm={0:'N',1:'S',2:'E',3:'W'};
-          return s.r.find(r=>r.n[0]==rName&&r.d==dm[dCode]);
-        }).filter(x=>x);
-        if(routes.length>1){
-          icons=`<div style="position:absolute;top:0;left:0">${drawRic(routes[0],28)}</div><div style="position:absolute;bottom:0;right:0">${drawRic(routes[1],28)}</div>`;
-        } else if(routes.length==1) icons=drawRic(routes[0],44);
+      const cacheKey=fav.s+fav.r;
+      const cData=cache[cacheKey]||{txt:'Loading...',cls:''};
+      div.innerHTML=`<div class=ic><img src="${drawIcon(s,fav)}" width=44 height=44></div><div class=tx><div class=t1>${fav.n||s?.n||fav.s}</div><div class="t2 ${cData.cls}">${cData.txt}</div></div>`;
+      if(ed){
+        const ctr=document.createElement('div');ctr.className='ed';
+        ctr.innerHTML=`<b onclick="event.stopPropagation();move(${i},-1)">\u2191</b><b onclick="event.stopPropagation();move(${i},1)">\u2193</b><b onclick="event.stopPropagation();ren(${i})">R</b>`;
+        div.appendChild(ctr);
       }
-      const sub=cache[fav.s+fav.r]||'Loading...';
-      div.innerHTML=`<div class=ic>${icons}</div><div class=tx><div class=t1>${fav.n||s?.n||fav.s}</div><div class=t2>${sub}</div></div>`;
       div.onclick=()=>go('arrivals',{s,fav});
       L.appendChild(div);
+      if(!cache[cacheKey]) fetchSub(fav);
     });
-    const add=document.createElement('div');add.className='i act';add.innerText='+ New Search';
-    add.onclick=()=>go('picker',{q:''});L.appendChild(add);
-    const set=document.createElement('div');set.className='i act';set.innerText='Settings';
-    set.onclick=()=>go('settings');L.appendChild(set);
-  }
-  
-  if(v=='settings'){
-    e('h').innerText='Settings';
-    const div=document.createElement('div');div.className='i';
-    div.innerHTML=`<div class=tg><span>Dark Mode</span><div class="chk${dk?' on':''}"></div></div>`;
-    div.onclick=()=>{
-      dk=!dk;
-      localStorage.setItem(T,dk?'1':'0');
-      document.body.classList.toggle('dk',dk);
-      render();
-    };
-    L.appendChild(div);
-    const rfs=document.createElement('div');rfs.className='i act';rfs.innerText='Refresh Station Data';
-    rfs.onclick=async()=>{
-      e('b').style.display='block';
-      try{
-        const {b}=await api('/s');S=ps(b);
-        localStorage.setItem(C,JSON.stringify([...b]));
-        alert('Data Refreshed');
-      }catch(e){alert('Error refreshing data')}
-      e('b').style.display='none';
-    };
-    L.appendChild(rfs);
+    if(rs){
+      L.insertAdjacentHTML('beforeend','<div class=sec>RECENT SEARCH</div>');
+      const s=S.find(x=>x.s==rs.s);
+      const div=document.createElement('div');div.className='i';
+      div.innerHTML=`<div class=ic><img src="${drawIcon(s,rs)}" width=44 height=44></div><div class=tx><div class=t1>${s?.n||rs.s}</div><div class=t2>Tap to view</div></div>`;
+      div.onclick=()=>go('arrivals',{s,r:rs.r});
+      L.appendChild(div);
+    }
+    L.insertAdjacentHTML('beforeend','<div class=i act onclick="go(\'picker\',{q:\'\'})">+ New Search</div><div class=i act onclick="go(\'settings\')">Settings</div>');
   }
   
   if(v=='picker'){
@@ -114,16 +130,12 @@ const render=()=>{
     const box=document.createElement('div');box.className='sb';
     box.innerHTML=`<input id=si placeholder="Search stations..." value="${p.q||''}">`;
     L.appendChild(box);
-    const input=e('si');
-    input.focus();
+    const input=e('si');input.focus();
     input.oninput=()=>{p.q=input.value.toLowerCase();renderList()};
-    
     const listDiv=document.createElement('div');L.appendChild(listDiv);
     const renderList=()=>{
       listDiv.innerHTML='';
-      const filtered=S.filter(s=>s.n.toLowerCase().includes(p.q)||s.s.includes(p.q));
-      if(!filtered.length) listDiv.innerHTML='<div class=p>No stations found</div>';
-      filtered.forEach(s=>{
+      S.filter(s=>s.n.toLowerCase().includes(p.q)).forEach(s=>{
         const div=document.createElement('div');div.className='i';
         div.innerHTML=`<div class=tx><div class=t1>${s.n}</div></div>`;
         div.onclick=()=>go('routes',{s,sel:[]});
@@ -138,7 +150,7 @@ const render=()=>{
     p.s.r.forEach((r,i)=>{
       const div=document.createElement('div');div.className='i';
       const is=p.sel.includes(i);
-      div.innerHTML=`<div class=ic>${drawRic(r,44)}</div><div class=tx><div class=t1>${r.h}</div><div class=t2>(${r.d})</div></div><div class="chk${is?' on':''}"></div>`;
+      div.innerHTML=`<div class=ic><img src="${drawIcon(p.s,{routes:[{r:r.n[0],d:({N:'0',S:'1',E:'2',W:'3'})[r.d]}]})}" width=44 height=44></div><div class=tx><div class=t1>${r.h}</div><div class=t2>(${r.d})</div></div><div class="chk${is?' on':''}"></div>`;
       div.onclick=()=>{if(is)p.sel=p.sel.filter(x=>x!=i);else p.sel.push(i);render()};
       L.appendChild(div);
     });
@@ -147,6 +159,7 @@ const render=()=>{
       ok.onclick=()=>{
         const dm={N:'0',S:'1',E:'2',W:'3'};
         const rp=p.sel.map(i=>p.s.r[i].n[0]+dm[p.s.r[i].d]).join('');
+        localStorage.setItem(R,JSON.stringify({s:p.s.s,r:rp,routes:p.sel.map(i=>({r:p.s.r[i].n[0],d:dm[p.s.r[i].d]}))}));
         go('arrivals',{s:p.s,r:rp});
       };
       L.appendChild(ok);
@@ -164,10 +177,10 @@ const render=()=>{
         const {b,h}=await api('/a?s='+p.s.s+'&r='+rParam);
         listCont.innerHTML='';
         if(!isF){
-          const addBtn=document.createElement('div');addBtn.className='i act';
-          addBtn.innerText='\u2606 Add Favorite';
+          const addBtn=document.createElement('div');addBtn.className='i act';addBtn.innerText='\u2606 Add Favorite';
           addBtn.onclick=()=>{
-            f.push({s:p.s.s,r:rParam,n:p.s.n});
+            const routes=[];for(let i=0;i<rParam.length;i+=2)routes.push({r:rParam[i],d:rParam[i+1]});
+            f.push({s:p.s.s,r:rParam,n:p.s.n,routes});
             localStorage.setItem(F,JSON.stringify(f));
             stk=[{v:'home'}];render();
           };
@@ -184,25 +197,42 @@ const render=()=>{
           else if(st<0) {lbl="Early "+-st+"m";cls='red'}
           const T=new Date;T.setHours(m/60,m%60);
           const timeStr=T.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-          if(i==0) cache[p.s.s+rParam]=`Next: ${timeStr} (${rn})`;
+          if(i==0) cache[p.s.s+rParam]={txt:`Next: ${timeStr} (${rn})`,cls};
           const div=document.createElement('div');div.className='ar';
-          div.innerHTML=`<div class=ar-l>${drawRic(x,44)}<div class=tx><div class=hs>${x.h}</div><div class="st ${cls}">${lbl}</div></div></div><div class=ar-r><div class=tm>${timeStr}</div><div class=hs>${rn}</div></div>`;
+          div.innerHTML=`<div class=ar-l><img src="${drawIcon(p.s,{routes:[{r:rn[0],d:({N:'0',S:'1',E:'2',W:'3'})[D]}]})}" width=44 height=44><div class=tx><div class=hs>${x.h}</div><div class="st ${cls}">${lbl}</div></div></div><div class=ar-r><div class=tm>${timeStr}</div><div class=hs>${rn}</div></div>`;
           listCont.appendChild(div);
         }
         if(!b[0])listCont.insertAdjacentHTML('beforeend','<div class=p>No arrivals</div>');
         if(isF){
-          const remBtn=document.createElement('div');remBtn.className='i act';
-          remBtn.innerText='\u2605 Remove Favorite';
-          remBtn.onclick=()=>{
-            f=f.filter(x=>!(x.s==p.s.s&&x.r==rParam));
-            localStorage.setItem(F,JSON.stringify(f));
-            render();
-          };
+          const remBtn=document.createElement('div');remBtn.className='i act';remBtn.innerText='\u2605 Remove Favorite';
+          remBtn.onclick=()=>{f=f.filter(x=>!(x.s==p.s.s&&x.r==rParam));localStorage.setItem(F,JSON.stringify(f));render()};
           listCont.appendChild(remBtn);
         }
-      } catch(e) { listCont.innerHTML='<div class=p>Error loading arrivals</div>' }
+      } catch(e) { listCont.innerHTML='<div class=p>Error</div>' }
     })();
   }
+
+  if(v=='settings'){
+    e('h').innerText='Settings';
+    L.innerHTML=`<div class=i onclick="dk=!dk;localStorage.setItem(T,dk?1:0);document.body.classList.toggle('dk',dk);render()"><div class=tg><span>Dark Mode</span><div class="chk${dk?' on':''}"></div></div></div><div class="i act" onclick="refreshData()">Refresh Station Data</div>`;
+  }
+};
+
+window.move=(i,d)=>{const n=i+d;if(n>=0&&n<f.length){[f[i],f[n]]=[f[n],f[i]];localStorage.setItem(F,JSON.stringify(f));render()}};
+window.ren=(i)=>{const n=prompt('Name?',f[i].n||f[i].s);if(n){f[i].n=n;localStorage.setItem(F,JSON.stringify(f));render()}};
+window.refreshData=async()=>{e('b').style.display='block';try{const {b}=await api('/s');S=ps(b);localStorage.setItem(C,JSON.stringify([...b]));alert('OK')}catch(e){alert('Err')}e('b').style.display='none'};
+
+const fetchSub=async(fav)=>{
+  try{
+    const {b}=await api('/a?s='+fav.s+'&r='+fav.r);
+    if(b[0]){
+      let ptr=1;ptr+=b[ptr]+1;ptr++;let m=b[ptr++]<<8|b[ptr++],st=new Int8Array([b[ptr++]])[0],cls='';
+      if(st==-128)cls='red';else if(st<0)cls='red';else if(st>=0)cls='green';
+      const T=new Date;T.setHours(m/60,m%60);
+      cache[fav.s+fav.r]={txt:`Next: ${T.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`,cls};
+      if(stk[stk.length-1].v=='home')render();
+    }
+  }catch(e){}
 };
 
 (async()=>{
