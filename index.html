@@ -1,5 +1,6 @@
 <!DOCTYPE html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,user-scalable=no"><meta name=theme-color content=#000><link rel=manifest href=manifest.json><title>NextTrain</title><style>
 :root{--bg:#fff;--fg:#000;--gray:#888;--light:#ddd;--green:#008000;--red:#c00}
+body.dk{--bg:#000;--fg:#fff;--gray:#aaa;--light:#333;--green:#0f0;--red:#f33}
 *{box-sizing:border-box}
 body{margin:0;font:16px system-ui,sans-serif;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent}
 #a{display:flex;flex-direction:column;height:100vh;overflow:hidden}
@@ -8,8 +9,8 @@ header h1{margin:0;font-size:1.1rem;flex:1;text-align:center;font-weight:700}
 header button{background:none;border:none;color:var(--fg);font-size:1.5rem;padding:0 8px;cursor:pointer}
 #L{flex:1;overflow-y:auto}
 .p{padding:20px;text-align:center;color:var(--gray)}
-.i{padding:12px;border-bottom:1px solid #eee;display:flex;align-items:center;min-height:56px}
-.i:active{background:#f0f0f0}
+.i{padding:12px;border-bottom:1px solid var(--light);display:flex;align-items:center;min-height:56px}
+.i:active{background:rgba(128,128,128,0.1)}
 .ic{width:44px;height:44px;position:relative;margin-right:12px;flex-shrink:0}
 .ric{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;border:1px solid rgba(0,0,0,0.1)}
 .tx{flex:1;overflow:hidden}
@@ -18,7 +19,7 @@ header button{background:none;border:none;color:var(--fg);font-size:1.5rem;paddi
 .act{color:var(--fg);justify-content:center;font-weight:500;min-height:44px}
 .chk{width:22px;height:22px;border:2px solid var(--fg);margin-left:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .chk.on::after{content:'\2713';font-size:18px}
-.ar{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #eee}
+.ar{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--light)}
 .ar-l{display:flex;align-items:center;gap:12px}
 .ar-r{text-align:right}
 .tm{font-size:20px;font-weight:700}
@@ -27,8 +28,9 @@ header button{background:none;border:none;color:var(--fg);font-size:1.5rem;paddi
 .st.red{color:var(--red)}
 .hs{font-size:14px;color:var(--gray)}
 #b{position:fixed;top:0;left:0;right:0;height:2px;background:#29f;display:none;z-index:9}
-input{background:#f0f0f0;color:var(--fg);border:1px solid var(--light);padding:8px;border-radius:4px;width:100%;font-size:16px}
+input{background:var(--light);color:var(--fg);border:1px solid var(--light);padding:8px;border-radius:4px;width:100%;font-size:16px}
 .sb{padding:10px;border-bottom:1px solid var(--light)}
+.tg{display:flex;align-items:center;justify-content:space-between;width:100%}
 </style>
 <div id=b></div>
 <div id=a>
@@ -36,8 +38,10 @@ input{background:#f0f0f0;color:var(--fg);border:1px solid var(--light);padding:8
 <div id=L></div>
 </div>
 <script>
-const W='https://nt.sloccy.workers.dev',C='nt_s',F='nt_f',e=i=>document.getElementById(i),t=new TextDecoder;
-let S=[],f=JSON.parse(localStorage.getItem(F)||'[]'),stk=[],cache={};
+const W='https://nt.sloccy.workers.dev',C='nt_s',F='nt_f',T='nt_t',e=i=>document.getElementById(i),t=new TextDecoder;
+let S=[],f=JSON.parse(localStorage.getItem(F)||'[]'),dk=localStorage.getItem(T)=='1',stk=[],cache={};
+
+if(dk)document.body.classList.add('dk');
 
 const api=async p=>{e('b').style.display='block';try{const r=await fetch(W+p);return {b:new Uint8Array(await r.arrayBuffer()),h:r.headers}}finally{e('b').style.display='none'}};
 const ps=b=>{let p=6,c=b[4]|b[5]<<8,R=[];for(let i=0;i<c;i++){let l=b[p++],s=t.decode(b.subarray(p,p+l));p+=l;let rc=b[p++],rs=[];for(let j=0;j<rc;j++){let r=b[p++],g=b[p++],bl=b[p++],rl=b[p++],rn=t.decode(b.subarray(p,p+rl));p+=rl;let d=String.fromCharCode(b[p++]),hl=b[p++],h=t.decode(b.subarray(p,p+hl));p+=hl;rs.push({c:`rgb(${r},${g},${bl})`,n:rn,d,h})}R.push({s,r:rs,n:s.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())})}return R};
@@ -77,6 +81,32 @@ const render=()=>{
     });
     const add=document.createElement('div');add.className='i act';add.innerText='+ New Search';
     add.onclick=()=>go('picker',{q:''});L.appendChild(add);
+    const set=document.createElement('div');set.className='i act';set.innerText='Settings';
+    set.onclick=()=>go('settings');L.appendChild(set);
+  }
+  
+  if(v=='settings'){
+    e('h').innerText='Settings';
+    const div=document.createElement('div');div.className='i';
+    div.innerHTML=`<div class=tg><span>Dark Mode</span><div class="chk${dk?' on':''}"></div></div>`;
+    div.onclick=()=>{
+      dk=!dk;
+      localStorage.setItem(T,dk?'1':'0');
+      document.body.classList.toggle('dk',dk);
+      render();
+    };
+    L.appendChild(div);
+    const rfs=document.createElement('div');rfs.className='i act';rfs.innerText='Refresh Station Data';
+    rfs.onclick=async()=>{
+      e('b').style.display='block';
+      try{
+        const {b}=await api('/s');S=ps(b);
+        localStorage.setItem(C,JSON.stringify([...b]));
+        alert('Data Refreshed');
+      }catch(e){alert('Error refreshing data')}
+      e('b').style.display='none';
+    };
+    L.appendChild(rfs);
   }
   
   if(v=='picker'){
@@ -127,16 +157,12 @@ const render=()=>{
     e('h').innerText=p.s.n;
     const rParam=p.fav?p.fav.r:p.r;
     const isF=f.find(x=>x.s==p.s.s&&x.r==rParam);
-    
     const listCont=document.createElement('div');L.appendChild(listCont);
     listCont.innerHTML='<div class=p>...</div>';
-    
     (async()=>{
       try {
         const {b,h}=await api('/a?s='+p.s.s+'&r='+rParam);
         listCont.innerHTML='';
-        
-        // Add favorite button at TOP if NOT favorited
         if(!isF){
           const addBtn=document.createElement('div');addBtn.className='i act';
           addBtn.innerText='\u2606 Add Favorite';
@@ -147,7 +173,6 @@ const render=()=>{
           };
           listCont.appendChild(addBtn);
         }
-
         let ptr=1;
         for(let i=0;i<b[0];i++){
           let rl=b[ptr++],rn=t.decode(b.subarray(ptr,ptr+rl));ptr+=rl;
@@ -165,8 +190,6 @@ const render=()=>{
           listCont.appendChild(div);
         }
         if(!b[0])listCont.insertAdjacentHTML('beforeend','<div class=p>No arrivals</div>');
-        
-        // Remove favorite button at BOTTOM if already favorited
         if(isF){
           const remBtn=document.createElement('div');remBtn.className='i act';
           remBtn.innerText='\u2605 Remove Favorite';
