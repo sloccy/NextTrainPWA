@@ -5,7 +5,7 @@ body.dk{--bg:#000;--fg:#fff;--gray:#aaa;--light:#333;--green:#0f0;--red:#f33}
 body{margin:0;font:16px system-ui,sans-serif;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent}
 #a{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 header{padding:12px;display:flex;align-items:center;background:var(--bg);border-bottom:1px solid var(--light);min-height:48px}
-header h1{margin:0;font-size:1.1rem;flex:1;text-align:center;font-weight:700}
+header h1{margin:0;font-size:1.1rem;flex:1;text-align:center;font-weight:700;cursor:pointer}
 header button{background:none;border:none;color:var(--fg);font-size:1.5rem;padding:0 8px;cursor:pointer}
 #L{flex:1;overflow-y:auto}
 .p{padding:20px;text-align:center;color:var(--gray)}
@@ -36,7 +36,7 @@ input{background:var(--light);color:var(--fg);border:1px solid var(--light);padd
 </style>
 <div id=b></div>
 <div id=a>
-<header><button id=back style="visibility:hidden">&lsaquo;</button><h1 id=h>NextTrain</h1><button id=eb>&vellip;</button></header>
+<header><button id=back style="visibility:hidden">&lsaquo;</button><h1 id=h onclick="stk=[{v:'home'}];render()">NextTrain</h1><button id=eb>&vellip;</button></header>
 <div id=L></div>
 </div>
 <script>
@@ -97,7 +97,7 @@ const render=()=>{
   const L=e('L');L.innerHTML='';
   
   if(v=='home'){
-    e('h').innerText='NextTrain';
+    rs=JSON.parse(localStorage.getItem(R)||'null');
     if(f.length) L.innerHTML='<div class=sec>FAVORITES</div>';
     f.forEach((fav,i)=>{
       const s=S.find(x=>x.s==fav.s);
@@ -126,7 +126,7 @@ const render=()=>{
   }
   
   if(v=='picker'){
-    e('h').innerText='Select Station';
+    // header text removed
     const box=document.createElement('div');box.className='sb';
     box.innerHTML=`<input id=si placeholder="Search stations..." value="${p.q||''}">`;
     L.appendChild(box);
@@ -146,7 +146,7 @@ const render=()=>{
   }
   
   if(v=='routes'){
-    e('h').innerText=p.s.n;
+    // header text removed
     p.s.r.forEach((r,i)=>{
       const div=document.createElement('div');div.className='i';
       const is=p.sel.includes(i);
@@ -159,7 +159,9 @@ const render=()=>{
       ok.onclick=()=>{
         const dm={N:'0',S:'1',E:'2',W:'3'};
         const rp=p.sel.map(i=>p.s.r[i].n[0]+dm[p.s.r[i].d]).join('');
-        localStorage.setItem(R,JSON.stringify({s:p.s.s,r:rp,routes:p.sel.map(i=>({r:p.s.r[i].n[0],d:dm[p.s.r[i].d]}))}));
+        const rss={s:p.s.s,r:rp,routes:p.sel.map(i=>({r:p.s.r[i].n[0],d:dm[p.s.r[i].d]}))};
+        localStorage.setItem(R,JSON.stringify(rss));
+        rs=rss;
         go('arrivals',{s:p.s,r:rp});
       };
       L.appendChild(ok);
@@ -167,7 +169,7 @@ const render=()=>{
   }
   
   if(v=='arrivals'){
-    e('h').innerText=p.s.n;
+    // header text removed
     const rParam=p.fav?p.fav.r:p.r;
     const isF=f.find(x=>x.s==p.s.s&&x.r==rParam);
     const listCont=document.createElement('div');L.appendChild(listCont);
@@ -213,7 +215,7 @@ const render=()=>{
   }
 
   if(v=='settings'){
-    e('h').innerText='Settings';
+    // header text removed
     L.innerHTML=`<div class=i onclick="dk=!dk;localStorage.setItem(T,dk?1:0);document.body.classList.toggle('dk',dk);render()"><div class=tg><span>Dark Mode</span><div class="chk${dk?' on':''}"></div></div></div><div class="i act" onclick="refreshData()">Refresh Station Data</div>`;
   }
 };
