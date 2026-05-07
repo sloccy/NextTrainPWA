@@ -1,1 +1,1 @@
-const C='nt-v1';self.oninstall=e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['.','index.html','manifest.json','icon.jpg'])));self.onfetch=e=>{if(e.request.url.includes('/a?')||e.request.url.includes('/s'))return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))}
+const C='nt-v2';self.oninstall=e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['manifest.json','icon.jpg'])));self.onfetch=e=>{if(e.request.mode==='navigate'||e.request.url.includes('/a?')||e.request.url.includes('/s'))return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))}

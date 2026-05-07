@@ -184,6 +184,7 @@ const render=()=>{
     
     if(v=='arrivals'){
       const rParam=p.fav?p.fav.r:p.r;
+      if(!p.s){const d=document.createElement('div');d.className='p';d.textContent='Station data not loaded';L.appendChild(d);return;}
       const isF=f.find(x=>x.s==p.s.s&&x.r==rParam);
       const listCont=document.createElement('div');L.appendChild(listCont);
       listCont.innerHTML='<div class=p>...</div>';
@@ -209,9 +210,9 @@ const render=()=>{
             if(st==-128) {lbl="Canceled";cls='red'}
             else if(st==-127) {lbl="Skipped";cls='red'}
             else if(st==-126) {lbl="On time";cls='green'}
-            else if(st>0) {lbl="Delayed "+st+"m";cls='green'}
-            else if(st<0) {lbl="Early "+Math.abs(st)+"m";cls='red'}
-            const T=new Date;T.setHours(m/60,m%60);
+            else if(st>0) {lbl="Delayed "+st+"m";cls='red'}
+            else if(st<0) {lbl="Early "+Math.abs(st)+"m";cls='green'}
+            const T=new Date;T.setHours(Math.floor(m/60),m%60);
             const timeStr=T.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
             if(i==0) cache[p.s.s+rParam]={txt:`Next: ${timeStr} (${rn})`,cls};
             const div=document.createElement('div');div.className='ar';
@@ -242,7 +243,7 @@ const render=()=>{
         try{const {b}=await api('/s');S=ps(b);localStorage.setItem(C,JSON.stringify([...b]));alert('OK')}catch(e){alert('Err')}
       };
     }
-  }catch(err){console.error(err)}
+  }catch(err){console.error(err);try{const L=e('L');if(L)L.innerHTML='<div class=p>Something went wrong</div>';}catch(_){}}
 };
 
 window.move=(i,d)=>{const n=i+d;if(n>=0&&n<f.length){[f[i],f[n]]=[f[n],f[i]];localStorage.setItem(F,JSON.stringify(f));render()}};
@@ -254,7 +255,7 @@ const fetchSub=async(fav)=>{
     if(b[0]){
       let ptr=1;ptr+=b[ptr]+1;ptr++;let m=b[ptr++]<<8|b[ptr++],st=new Int8Array([b[ptr++]])[0],cls='';
       if(st==-128||st==-127||st<0)cls='red';else if(st==-126||st>0)cls='green';
-      const T=new Date;T.setHours(m/60,m%60);
+      const T=new Date;T.setHours(Math.floor(m/60),m%60);
       cache[fav.s+fav.r]={txt:`Next: ${T.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`,cls};
       if(stk[stk.length-1].v=='home')render();
     }
