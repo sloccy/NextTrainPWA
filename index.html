@@ -48,6 +48,7 @@ input{background:var(--light);color:var(--fg);border:1px solid var(--light);padd
 .s-del{color:var(--red)}
 </style>
 <div id=bar></div>
+<div id=off style="position:fixed;top:2px;left:0;right:0;background:#c00;color:#fff;text-align:center;font-size:13px;padding:4px;z-index:12;display:none">No signal</div>
 <div id=app>
   <header id=hdr>NextTrain</header>
   <div class=nav>
@@ -59,29 +60,57 @@ input{background:var(--light);color:var(--fg);border:1px solid var(--light);padd
 </div>
 <script>
 const WORKER='https://nt.sloccy.workers.dev';
-const K_STA='nt_s',K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r';
+const K_STA='nt_s',K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r',K_CACHE='nt_c';
+const CACHE_TTL=5*60*1000,FETCH_TIMEOUT=10000,SUB_CONCURRENCY=2;
 const DEC=new TextDecoder();
 const D2L={'0':'N','1':'S','2':'E','3':'W'};
 const L2D={'N':'0','S':'1','E':'2','W':'3'};
 
 let stations=[],favs=[],recent=null,dark=false;
 let editing=false,navStack=[],arrCache={},refreshTimer=null;
+let subQueue=[],subActive=0;
+const inflight=new Map();
 
 try{favs=JSON.parse(localStorage.getItem(K_FAV))||[];}catch(_){favs=[];}
 if(!Array.isArray(favs))favs=[];
 try{recent=JSON.parse(localStorage.getItem(K_REC));}catch(_){recent=null;}
+try{arrCache=JSON.parse(localStorage.getItem(K_CACHE))||{};}catch(_){arrCache={};}
+// prune cache entries older than 1 hour
+{const now=Date.now();for(const k of Object.keys(arrCache)){if(!arrCache[k].t||now-arrCache[k].t>3600000)delete arrCache[k];}}
 dark=localStorage.getItem(K_DARK)==='1';
 if(dark)document.body.classList.add('dk');
 
 const $=id=>document.getElementById(id);
 
 async function api(path){
+  if(inflight.has(path))return inflight.get(path);
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),FETCH_TIMEOUT);
   $('bar').style.display='block';
-  try{
-    const res=await fetch(WORKER+path);
-    if(!res.ok)throw new Error(res.status);
-    return new Uint8Array(await res.arrayBuffer());
-  }finally{$('bar').style.display='none';}
+  const p=(async()=>{
+    try{
+      const res=await fetch(WORKER+path,{signal:ctrl.signal});
+      if(!res.ok)throw new Error(res.status);
+      return new Uint8Array(await res.arrayBuffer());
+    }finally{
+      clearTimeout(tid);
+      inflight.delete(path);
+      if(inflight.size===0)$('bar').style.display='none';
+    }
+  })();
+  inflight.set(path,p);
+  return p;
+}
+
+function freshCache(key){const c=arrCache[key];return(c&&c.t&&Date.now()-c.t<CACHE_TTL)?c:null;}
+function saveCache(){localStorage.setItem(K_CACHE,JSON.stringify(arrCache));}
+
+function enqueueSub(fav){subQueue.push(fav);pumpSub();}
+function pumpSub(){
+  while(subActive<SUB_CONCURRENCY&&subQueue.length){
+    const fav=subQueue.shift();subActive++;
+    fetchFavSub(fav).finally(()=>{subActive--;pumpSub();});
+  }
 }
 
 function fmtTime(mins){
@@ -236,7 +265,7 @@ function viewHome(L){
   }
   favs.forEach((fav,idx)=>{
     const sta=stations.find(s=>s.s===fav.s);
-    const cached=arrCache[fav.s+fav.r];
+    const cached=freshCache(fav.s+fav.r);
     const row=document.createElement('div');row.className='row';
 
     const img=document.createElement('img');
@@ -270,7 +299,7 @@ function viewHome(L){
 
     row.addEventListener('click',()=>push('arrivals',{sta,fav}));
     L.appendChild(row);
-    if(!cached)fetchFavSub(fav);
+    if(!cached)enqueueSub(fav);
   });
 
   if(recent){
@@ -396,7 +425,7 @@ function viewArrivals(L,params){
         const route=(sta.r||[]).find(rt=>rt.n===arr.rn&&rt.d===arr.dir)||{};
         const{lbl,cls}=stLabel(arr.st);
         const timeStr=fmtTime(arr.mins);
-        if(i===0)arrCache[sta.s+rParam]={txt:'Next: '+timeStr+' ('+arr.rn+')',cls};
+        if(i===0){arrCache[sta.s+rParam]={txt:'Next: '+timeStr+' ('+arr.rn+')',cls,t:Date.now()};saveCache();}
 
         const row=document.createElement('div');row.className='ar';
         const left=document.createElement('div');left.className='ar-l';
@@ -508,7 +537,8 @@ async function fetchFavSub(fav){
     const arr=parseArrivals(bytes);
     if(arr.length){
       const{cls}=stLabel(arr[0].st);
-      arrCache[fav.s+fav.r]={txt:'Next: '+fmtTime(arr[0].mins)+' ('+arr[0].rn+')',cls};
+      arrCache[fav.s+fav.r]={txt:'Next: '+fmtTime(arr[0].mins)+' ('+arr[0].rn+')',cls,t:Date.now()};
+      saveCache();
       if(navStack.length&&navStack[navStack.length-1].view==='home')render();
     }
   }catch(_){}
@@ -519,6 +549,7 @@ function render(){
   const{view,params}=navStack[navStack.length-1];
 
   if(refreshTimer&&view!=='arrivals'){clearInterval(refreshTimer);refreshTimer=null;}
+  if(view!=='home'){subQueue=[];}
 
   $('back').style.visibility=navStack.length>1?'visible':'hidden';
   $('ebtn').style.display=view==='home'?'':'none';
@@ -543,6 +574,19 @@ function render(){
 $('hdr').addEventListener('click',reset);
 $('back').addEventListener('click',pop);
 $('ebtn').addEventListener('click',()=>{editing=!editing;render();});
+
+function updateOffline(){$('off').style.display=navigator.onLine?'none':'block';}
+window.addEventListener('online',updateOffline);
+window.addEventListener('offline',updateOffline);
+updateOffline();
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}
+  }else if(navStack.length&&navStack[navStack.length-1].view==='arrivals'){
+    render();
+  }
+});
 
 (async()=>{
   const c=localStorage.getItem(K_STA);
