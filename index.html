@@ -161,7 +161,7 @@ function stLabel(st){
   if(st===-128)return{lbl:'Canceled',cls:'r'};
   if(st===-127)return{lbl:'Skipped',cls:'r'};
   if(st===-126)return{lbl:'On time',cls:'g'};
-  if(st>0)return{lbl:'Delayed '+st+'m',cls:'r'};
+  if(st>0)return{lbl:'Late '+st+'m',cls:'r'};
   if(st<0)return{lbl:'Early '+Math.abs(st)+'m',cls:'g'};
   return{lbl:'Scheduled',cls:''};
 }
