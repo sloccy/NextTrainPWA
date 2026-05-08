@@ -304,6 +304,8 @@ function viewHome(L){
 
   if(recent){
     try{
+      const sec=document.createElement('div');sec.className='sec';sec.textContent='RECENT';
+      L.appendChild(sec);
       const sta=stations.find(s=>s.s===recent.s);
       const row=document.createElement('div');row.className='row';
       const img=document.createElement('img');
