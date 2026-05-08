@@ -1,1 +1,19 @@
-{"name":"NextTrain","short_name":"NextTrain","start_url":".","display":"standalone","background_color":"#000","theme_color":"#000","icons":[{"src":"icon.jpg","sizes":"192x192","type":"image/jpeg"}]}
+{
+  "id": "/",
+  "name": "NextTrain",
+  "short_name": "NextTrain",
+  "description": "RTD light/commuter rail arrivals for Denver.",
+  "start_url": ".",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "categories": ["travel", "navigation"],
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

@@ -1,23 +1,30 @@
 <!DOCTYPE html>
 <html lang=en>
 <meta charset=utf-8>
-<meta name=viewport content="width=device-width,initial-scale=1,user-scalable=no">
-<meta name=theme-color content=#fff>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name=theme-color media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name=theme-color media="(prefers-color-scheme: dark)" content="#000000">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content=NextTrain>
 <link rel=manifest href=manifest.json>
+<link rel=apple-touch-icon href=apple-touch-icon-180.png>
+<link rel=preconnect href=https://nt.sloccy.workers.dev crossorigin>
 <title>NextTrain</title>
 <style>
 :root{--bg:#fff;--fg:#000;--gray:#888;--light:#ddd;--green:#008000;--red:#c00;--bnr:#fff;--bnrf:#000}
 body.dk{--bg:#000;--fg:#fff;--gray:#aaa;--light:#333;--green:#0f0;--red:#f33;--bnr:#000;--bnrf:#fff}
 *{box-sizing:border-box}
-body{margin:0;font:16px system-ui,sans-serif;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent}
-#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-header{background:var(--bnr);color:var(--bnrf);padding:8px;text-align:center;font-weight:900;letter-spacing:1px;cursor:pointer;z-index:10;font-size:1.2rem}
+body{margin:0;font:16px system-ui,sans-serif;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+#app{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+header{background:var(--bnr);color:var(--bnrf);padding:calc(8px + env(safe-area-inset-top)) 8px 8px;text-align:center;font-weight:900;letter-spacing:1px;cursor:pointer;z-index:10;font-size:1.2rem}
 .nav{display:flex;align-items:center;background:var(--bg);border-bottom:1px solid var(--light);min-height:44px;padding:0 8px}
 .nav h2{margin:0;font-size:1rem;flex:1;text-align:center;font-weight:700;color:var(--fg)}
 .nav button{background:none;border:none;color:var(--fg);font-size:1.5rem;padding:0 8px;cursor:pointer;width:40px;line-height:1}
-#list{flex:1;overflow-y:auto}
+#list{flex:1;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom)}
 .p{padding:20px;text-align:center;color:var(--gray)}
-.row{padding:12px;border-bottom:1px solid var(--light);display:flex;align-items:center;min-height:56px;cursor:pointer}
+.row{padding:12px;border-bottom:1px solid var(--light);display:flex;align-items:center;min-height:56px;cursor:pointer;touch-action:manipulation}
 .row:active{background:rgba(128,128,128,.1)}
 .ic{width:44px;height:44px;margin-right:12px;flex-shrink:0}
 .tx{flex:1;overflow:hidden}
@@ -43,8 +50,19 @@ input{background:var(--light);color:var(--fg);border:1px solid var(--light);padd
 .edbtn{padding:4px 8px;border:1px solid var(--fg);border-radius:4px;font-size:14px;cursor:pointer;background:var(--bg);color:var(--fg);margin-left:4px;line-height:1.4}
 .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;display:flex;flex-direction:column;justify-content:flex-end}
 .sheet{background:var(--bg);border-top:2px solid var(--light)}
-.s-item{padding:16px;border-bottom:1px solid var(--light);text-align:center;font-size:16px;cursor:pointer;color:var(--fg)}
+.s-item{padding:16px;border-bottom:1px solid var(--light);text-align:center;font-size:16px;cursor:pointer;color:var(--fg);touch-action:manipulation}
 .s-item:active{background:rgba(128,128,128,.1)}
+@keyframes skel-pulse{0%,100%{opacity:.4}50%{opacity:.9}}
+.skel{background:var(--light);border-radius:4px;animation:skel-pulse 1.4s ease-in-out infinite}
+.skel-row{padding:14px 12px;border-bottom:1px solid var(--light);display:flex;align-items:center;gap:12px}
+.skel-ic{width:44px;height:44px;flex-shrink:0}
+.skel-tx{flex:1;display:flex;flex-direction:column;gap:8px}
+.skel-t1{height:16px;width:60%}
+.skel-t2{height:12px;width:40%}
+#upd{font-size:11px;color:var(--gray);text-align:center;padding:2px 0;transition:color .3s}
+#upd.stale{color:var(--red)}
+.ptr-spinner{position:absolute;left:50%;transform:translateX(-50%);top:-40px;width:24px;height:24px;border:3px solid var(--light);border-top-color:var(--fg);border-radius:50%;animation:spin .7s linear infinite;display:none}
+@keyframes spin{to{transform:translateX(-50%) rotate(360deg)}}
 .s-del{color:var(--red)}
 </style>
 <div id=bar></div>
@@ -56,19 +74,20 @@ input{background:var(--light);color:var(--fg);border:1px solid var(--light);padd
     <h2 id=sub></h2>
     <button id=ebtn>&#8942;</button>
   </div>
+  <div id=upd></div>
   <div id=list></div>
 </div>
 <script>
 const WORKER='https://nt.sloccy.workers.dev';
-const K_STA='nt_s',K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r',K_CACHE='nt_c';
-const CACHE_TTL=5*60*1000,FETCH_TIMEOUT=10000,SUB_CONCURRENCY=2;
+const K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r',K_CACHE='nt_c';
+const CACHE_TTL=5*60*1000;
 const DEC=new TextDecoder();
 const D2L={'0':'N','1':'S','2':'E','3':'W'};
 const L2D={'N':'0','S':'1','E':'2','W':'3'};
 
 let stations=[],favs=[],recent=null,dark=false;
 let editing=false,navStack=[],arrCache={},refreshTimer=null;
-let subQueue=[],subActive=0;
+let subQueue=[],subActive=0,lastLoadTime=0,updTimer=null;
 const inflight=new Map();
 
 try{favs=JSON.parse(localStorage.getItem(K_FAV))||[];}catch(_){favs=[];}
@@ -82,23 +101,41 @@ if(dark)document.body.classList.add('dk');
 
 const $=id=>document.getElementById(id);
 
+function netProfile(){
+  const c=navigator.connection;
+  if(!c)return{timeout:6000,refresh:60000,concurrency:2};
+  if(c.saveData||c.effectiveType==='slow-2g'||c.effectiveType==='2g')
+    return{timeout:9000,refresh:300000,concurrency:1};
+  if(c.effectiveType==='3g')
+    return{timeout:7000,refresh:120000,concurrency:2};
+  return{timeout:5000,refresh:60000,concurrency:3};
+}
+
+function hap(ms){navigator.vibrate&&navigator.vibrate(ms);}
+
 async function api(path){
   if(inflight.has(path))return inflight.get(path);
-  const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),FETCH_TIMEOUT);
-  $('bar').style.display='block';
   const p=(async()=>{
-    try{
-      const res=await fetch(WORKER+path,{signal:ctrl.signal});
-      if(!res.ok)throw new Error(res.status);
-      return new Uint8Array(await res.arrayBuffer());
-    }finally{
-      clearTimeout(tid);
-      inflight.delete(path);
-      if(inflight.size===0)$('bar').style.display='none';
+    let lastErr;
+    const np=netProfile();
+    for(let i=0;i<2;i++){
+      const ctrl=new AbortController();
+      const tid=setTimeout(()=>ctrl.abort(),np.timeout*(i+1));
+      $('bar').style.display='block';
+      try{
+        const res=await fetch(WORKER+path,{signal:ctrl.signal});
+        if(!res.ok)throw new Error(res.status);
+        return new Uint8Array(await res.arrayBuffer());
+      }catch(e){lastErr=e;}
+      finally{
+        clearTimeout(tid);
+        if(inflight.size<=1)$('bar').style.display='none';
+      }
     }
+    throw lastErr;
   })();
   inflight.set(path,p);
+  p.finally(()=>inflight.delete(path));
   return p;
 }
 
@@ -107,7 +144,8 @@ function saveCache(){localStorage.setItem(K_CACHE,JSON.stringify(arrCache));}
 
 function enqueueSub(fav){subQueue.push(fav);pumpSub();}
 function pumpSub(){
-  while(subActive<SUB_CONCURRENCY&&subQueue.length){
+  const limit=netProfile().concurrency;
+  while(subActive<limit&&subQueue.length){
     const fav=subQueue.shift();subActive++;
     fetchFavSub(fav).finally(()=>{subActive--;pumpSub();});
   }
@@ -252,10 +290,39 @@ function showSheet(items){
   });
 }
 
+function showInput(label,def){
+  return new Promise(resolve=>{
+    const bg=document.createElement('div');bg.className='sheet-bg';
+    const sh=document.createElement('div');sh.className='sheet';
+    sh.style.padding='16px';
+    const lbl=document.createElement('div');lbl.textContent=label;lbl.style.cssText='font-weight:700;margin-bottom:10px';
+    const inp=document.createElement('input');inp.value=def||'';inp.style.marginBottom='12px';
+    const done=v=>{document.body.removeChild(bg);resolve(v);};
+    const save=document.createElement('div');save.className='s-item';save.textContent='Save';
+    save.addEventListener('click',()=>done(inp.value.trim()||null));
+    const cancel=document.createElement('div');cancel.className='s-item s-del';cancel.textContent='Cancel';
+    cancel.addEventListener('click',()=>done(null));
+    sh.appendChild(lbl);sh.appendChild(inp);sh.appendChild(save);sh.appendChild(cancel);
+    bg.appendChild(sh);
+    bg.addEventListener('click',ev=>{if(ev.target===bg)done(null);});
+    document.body.appendChild(bg);
+    setTimeout(()=>inp.focus(),50);
+  });
+}
+
 function push(view,params){navStack.push({view,params:params||{}});render();}
 function pop(){if(navStack.length>1){navStack.pop();render();}}
 function reset(){navStack=[{view:'home',params:{}}];editing=false;render();}
 function saveFavs(){localStorage.setItem(K_FAV,JSON.stringify(favs));}
+
+function tickUpd(){
+  const el=$('upd');if(!el||!lastLoadTime)return;
+  const sec=Math.floor((Date.now()-lastLoadTime)/1000);
+  const refresh=netProfile().refresh/1000;
+  const txt=sec<5?'Just updated':sec<60?`Updated ${sec}s ago`:`Updated ${Math.floor(sec/60)}m ago`;
+  el.textContent=txt;
+  el.className=sec>refresh*2?'stale':'';
+}
 
 function viewHome(L){
   if(favs.length){
@@ -275,8 +342,15 @@ function viewHome(L){
     const t1=document.createElement('div');t1.className='t1';
     t1.textContent=fav.n||(sta&&sta.n)||fav.s;
     const t2=document.createElement('div');
-    t2.className='t2'+(cached&&cached.cls?' '+cached.cls:'');
-    t2.textContent=cached?cached.txt:'Loading…';
+    if(cached){
+      t2.className='t2'+(cached.cls?' '+cached.cls:'');
+      t2.textContent=cached.txt;
+    }else{
+      t2.className='t2';
+      const skelLine=document.createElement('span');
+      skelLine.className='skel';skelLine.style.cssText='display:inline-block;width:120px;height:12px;border-radius:3px';
+      t2.appendChild(skelLine);
+    }
     tx.appendChild(t1);tx.appendChild(t2);
     row.appendChild(img);row.appendChild(tx);
 
@@ -286,7 +360,7 @@ function viewHome(L){
       [
         {l:'↑',fn:()=>{if(idx>0){[favs[idx],favs[idx-1]]=[favs[idx-1],favs[idx]];saveFavs();render();}}},
         {l:'↓',fn:()=>{if(idx<favs.length-1){[favs[idx],favs[idx+1]]=[favs[idx+1],favs[idx]];saveFavs();render();}}},
-        {l:'R',fn:()=>{const n=prompt('Name?',fav.n||(sta&&sta.n)||fav.s);if(n!==null){fav.n=n;saveFavs();render();}}},
+        {l:'R',fn:async()=>{const n=await showInput('Rename',fav.n||(sta&&sta.n)||fav.s);if(n){fav.n=n;saveFavs();render();}}},
         {l:'×',fn:async()=>{const v=await showSheet([{label:'Confirm Delete',value:'del',del:true}]);if(v==='del'){favs.splice(idx,1);saveFavs();render();}}}
       ].forEach(({l,fn})=>{
         const btn=document.createElement('button');
@@ -297,7 +371,30 @@ function viewHome(L){
       row.appendChild(btns);
     }
 
-    row.addEventListener('click',()=>push('arrivals',{sta,fav}));
+    // Long-press → action sheet (works even outside edit mode)
+    let lpTimer=null;
+    row.addEventListener('pointerdown',()=>{
+      lpTimer=setTimeout(async()=>{
+        hap(20);
+        const items=[];
+        if(idx>0)items.push({label:'↑ Move Up',value:'up'});
+        if(idx<favs.length-1)items.push({label:'↓ Move Down',value:'down'});
+        items.push({label:'Rename',value:'rename'});
+        items.push({label:'Delete',value:'delete',del:true});
+        const action=await showSheet(items);
+        if(!action)return;
+        if(action==='up'){[favs[idx],favs[idx-1]]=[favs[idx-1],favs[idx]];saveFavs();render();}
+        else if(action==='down'){[favs[idx],favs[idx+1]]=[favs[idx+1],favs[idx]];saveFavs();render();}
+        else if(action==='rename'){const n=await showInput('Rename',fav.n||(sta&&sta.n)||fav.s);if(n){fav.n=n;saveFavs();render();}}
+        else if(action==='delete'){const v=await showSheet([{label:'Confirm Delete',value:'del',del:true}]);if(v==='del'){favs.splice(idx,1);saveFavs();render();}}
+      },500);
+    });
+    const cancelLp=()=>{clearTimeout(lpTimer);lpTimer=null;};
+    row.addEventListener('pointerup',cancelLp);
+    row.addEventListener('pointermove',cancelLp);
+    row.addEventListener('pointercancel',cancelLp);
+
+    row.addEventListener('click',()=>{hap(8);push('arrivals',{sta,fav});});
     L.appendChild(row);
     if(!cached)enqueueSub(fav);
   });
@@ -390,79 +487,135 @@ function viewRoutes(L,params){
   }
 }
 
+function renderArrivals(cont,arrivals,sta,rParam,rList){
+  cont.innerHTML='';
+  const isFav=favs.find(f=>f.s===sta.s&&f.r===rParam);
+  if(!isFav){
+    const addBtn=document.createElement('div');addBtn.className='row act';
+    addBtn.textContent='☆ Add Favorite';
+    addBtn.addEventListener('click',()=>{
+      favs.push({s:sta.s,r:rParam,n:sta.n,routes:rList||[]});
+      saveFavs();reset();
+    });
+    cont.appendChild(addBtn);
+  }
+  if(!arrivals.length){
+    cont.insertAdjacentHTML('beforeend','<div class=p>No arrivals</div>');
+  }
+  arrivals.forEach((arr,i)=>{
+    const route=(sta.r||[]).find(rt=>rt.n===arr.rn&&rt.d===arr.dir)||{};
+    const{lbl,cls}=stLabel(arr.st);
+    const timeStr=fmtTime(arr.mins);
+    if(i===0){arrCache[sta.s+rParam]={txt:'Next: '+timeStr+' ('+arr.rn+')',cls,t:Date.now()};saveCache();}
+    const row=document.createElement('div');row.className='ar';
+    const left=document.createElement('div');left.className='ar-l';
+    const img=document.createElement('img');img.width=img.height=44;
+    img.src=drawIcon(sta,{routes:[{r:arr.rn[0],d:L2D[arr.dir]||arr.dir}]});
+    const info=document.createElement('div');
+    const hsDiv=document.createElement('div');hsDiv.className='hs';hsDiv.textContent=route.h||'';
+    const stDiv=document.createElement('div');stDiv.className='st'+(cls?' '+cls:'');stDiv.textContent=lbl;
+    info.appendChild(hsDiv);info.appendChild(stDiv);
+    left.appendChild(img);left.appendChild(info);
+    const right=document.createElement('div');right.className='ar-r';
+    const tm=document.createElement('div');tm.className='tm';tm.textContent=timeStr;
+    const rn=document.createElement('div');rn.className='hs';rn.textContent=arr.rn;
+    right.appendChild(tm);right.appendChild(rn);
+    row.appendChild(left);row.appendChild(right);
+    cont.appendChild(row);
+  });
+  if(isFav){
+    const remBtn=document.createElement('div');remBtn.className='row act';
+    remBtn.textContent='★ Remove Favorite';
+    remBtn.addEventListener('click',async()=>{
+      const v=await showSheet([{label:'Remove Favorite',value:'del',del:true}]);
+      if(v==='del'){favs=favs.filter(f=>!(f.s===sta.s&&f.r===rParam));saveFavs();render();}
+    });
+    cont.appendChild(remBtn);
+  }
+}
+
 function viewArrivals(L,params){
   const{sta,fav,r,routes}=params;
   const rParam=fav?fav.r:r;
   const rList=fav?fav.routes:routes;
   if(!sta){L.innerHTML='<div class=p>Station data not loaded</div>';return;}
 
+  // Show skeleton immediately
   const cont=document.createElement('div');
-  cont.innerHTML='<div class=p>…</div>';
+  const skelFrag=document.createDocumentFragment();
+  for(let i=0;i<4;i++){
+    const sr=document.createElement('div');sr.className='skel-row';
+    const si=document.createElement('div');si.className='skel skel-ic';
+    const st=document.createElement('div');st.className='skel-tx';
+    const st1=document.createElement('div');st1.className='skel skel-t1';
+    const st2=document.createElement('div');st2.className='skel skel-t2';
+    st.appendChild(st1);st.appendChild(st2);sr.appendChild(si);sr.appendChild(st);
+    skelFrag.appendChild(sr);
+  }
+  cont.appendChild(skelFrag);
   L.appendChild(cont);
+
+  // Show cached data immediately if available
+  const cached=arrCache[sta.s+rParam];
+  if(cached&&cached.rows){
+    renderArrivals(cont,cached.rows,sta,rParam,rList);
+    lastLoadTime=cached.t||Date.now();
+    tickUpd();
+  }
 
   if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}
 
+  // Pull-to-refresh setup
+  let ptrStart=0,ptrActive=false,spinner=null;
+  spinner=document.createElement('div');spinner.className='ptr-spinner';
+  L.style.position='relative';L.style.overflowY='auto';
+  L.insertBefore(spinner,cont);
+
+  L.addEventListener('touchstart',e=>{
+    if(L.scrollTop===0)ptrStart=e.touches[0].clientY;
+  },{passive:true});
+  L.addEventListener('touchmove',e=>{
+    if(!ptrStart)return;
+    const dy=e.touches[0].clientY-ptrStart;
+    if(dy>70&&!ptrActive){ptrActive=true;spinner.style.display='block';}
+  },{passive:true});
+  L.addEventListener('touchend',()=>{
+    if(ptrActive){hap(15);load();}
+    ptrStart=0;ptrActive=false;if(spinner)spinner.style.display='none';
+  },{passive:true});
+
   const load=async()=>{
+    if(!navigator.onLine){return;}
     try{
       const bytes=await api('/a?s='+sta.s+'&r='+rParam);
-      cont.innerHTML='';
       const arrivals=parseArrivals(bytes);
-      const isFav=favs.find(f=>f.s===sta.s&&f.r===rParam);
-
-      if(!isFav){
-        const addBtn=document.createElement('div');addBtn.className='row act';
-        addBtn.textContent='☆ Add Favorite';
-        addBtn.addEventListener('click',()=>{
-          favs.push({s:sta.s,r:rParam,n:sta.n,routes:rList||[]});
-          saveFavs();reset();
-        });
-        cont.appendChild(addBtn);
-      }
-
-      if(!arrivals.length){
-        cont.insertAdjacentHTML('beforeend','<div class=p>No arrivals</div>');
-      }
-
-      arrivals.forEach((arr,i)=>{
-        const route=(sta.r||[]).find(rt=>rt.n===arr.rn&&rt.d===arr.dir)||{};
-        const{lbl,cls}=stLabel(arr.st);
-        const timeStr=fmtTime(arr.mins);
-        if(i===0){arrCache[sta.s+rParam]={txt:'Next: '+timeStr+' ('+arr.rn+')',cls,t:Date.now()};saveCache();}
-
-        const row=document.createElement('div');row.className='ar';
-        const left=document.createElement('div');left.className='ar-l';
-        const img=document.createElement('img');img.width=img.height=44;
-        img.src=drawIcon(sta,{routes:[{r:arr.rn[0],d:L2D[arr.dir]||arr.dir}]});
-        const info=document.createElement('div');
-        const hsDiv=document.createElement('div');hsDiv.className='hs';hsDiv.textContent=route.h||'';
-        const stDiv=document.createElement('div');stDiv.className='st'+(cls?' '+cls:'');stDiv.textContent=lbl;
-        info.appendChild(hsDiv);info.appendChild(stDiv);
-        left.appendChild(img);left.appendChild(info);
-
-        const right=document.createElement('div');right.className='ar-r';
-        const tm=document.createElement('div');tm.className='tm';tm.textContent=timeStr;
-        const rn=document.createElement('div');rn.className='hs';rn.textContent=arr.rn;
-        right.appendChild(tm);right.appendChild(rn);
-        row.appendChild(left);row.appendChild(right);
-        cont.appendChild(row);
-      });
-
-      if(isFav){
-        const remBtn=document.createElement('div');remBtn.className='row act';
-        remBtn.textContent='★ Remove Favorite';
-        remBtn.addEventListener('click',async()=>{
-          const v=await showSheet([{label:'Remove Favorite',value:'del',del:true}]);
-          if(v==='del'){favs=favs.filter(f=>!(f.s===sta.s&&f.r===rParam));saveFavs();render();}
-        });
-        cont.appendChild(remBtn);
-      }
+      // Stash raw rows for instant-load next time
+      arrCache[sta.s+rParam]={txt:'Next: '+(arrivals[0]?fmtTime(arrivals[0].mins)+' ('+arrivals[0].rn+')':'—'),cls:arrivals[0]?stLabel(arrivals[0].st).cls:'',rows:arrivals,t:Date.now()};
+      saveCache();
+      lastLoadTime=Date.now();
+      if(updTimer)clearInterval(updTimer);
+      updTimer=setInterval(tickUpd,15000);
+      tickUpd();
+      renderArrivals(cont,arrivals,sta,rParam,rList);
     }catch(_){
-      cont.innerHTML='<div class=p>Error loading arrivals</div>';
+      if(!cont.querySelector('.ar')&&!cont.querySelector('.row')){
+        cont.innerHTML='<div class=p>Error loading arrivals</div>';
+      }
     }
   };
 
   load();
-  refreshTimer=setInterval(load,60000);
+  const np=netProfile();
+  refreshTimer=setInterval(load,np.refresh);
+
+  if(navigator.connection){
+    const onConnChange=()=>{
+      clearInterval(refreshTimer);
+      refreshTimer=setInterval(load,netProfile().refresh);
+    };
+    navigator.connection.addEventListener('change',onConnChange);
+    params._cleanConn=onConnChange;
+  }
 }
 
 function viewSettings(L){
@@ -475,7 +628,12 @@ function viewSettings(L){
   tg.appendChild(span);tg.appendChild(chk);dkRow.appendChild(tg);
   dkRow.addEventListener('click',()=>{
     dark=!dark;localStorage.setItem(K_DARK,dark?'1':'0');
-    document.body.classList.toggle('dk',dark);render();
+    document.body.classList.toggle('dk',dark);
+    // Override both theme-color metas to match in-app dark choice
+    document.querySelectorAll('meta[name=theme-color]').forEach(m=>{
+      m.content=dark?'#000000':'#ffffff';
+    });
+    render();
   });
   L.appendChild(dkRow);
 
@@ -489,7 +647,6 @@ function viewSettings(L){
     try{
       const bytes=await api('/s');
       stations=parseStations(bytes);
-      localStorage.setItem(K_STA,JSON.stringify([...bytes]));
       rfRow.textContent='Done!';
       setTimeout(()=>{rfRow.textContent='Refresh Station Data';},2000);
     }catch(_){
@@ -522,8 +679,8 @@ function viewEditFavs(L){
       if(action==='up'){[favs[idx],favs[idx-1]]=[favs[idx-1],favs[idx]];saveFavs();render();}
       else if(action==='down'){[favs[idx],favs[idx+1]]=[favs[idx+1],favs[idx]];saveFavs();render();}
       else if(action==='rename'){
-        const n=prompt('Name?',fav.n||(sta&&sta.n)||fav.s);
-        if(n!==null){fav.n=n;saveFavs();render();}
+        const n=await showInput('Rename',fav.n||(sta&&sta.n)||fav.s);
+        if(n){fav.n=n;saveFavs();render();}
       }else if(action==='delete'){
         const v=await showSheet([{label:'Confirm Delete',value:'del',del:true}]);
         if(v==='del'){favs.splice(idx,1);saveFavs();render();}
@@ -550,7 +707,18 @@ function render(){
   if(!navStack.length)return;
   const{view,params}=navStack[navStack.length-1];
 
-  if(refreshTimer&&view!=='arrivals'){clearInterval(refreshTimer);refreshTimer=null;}
+  if(refreshTimer&&view!=='arrivals'){
+    clearInterval(refreshTimer);refreshTimer=null;
+    // Clean up connection change listener from previous arrivals view
+    if(navigator.connection&&navStack.length>1){
+      const prev=navStack[navStack.length-2];
+      if(prev&&prev.params&&prev.params._cleanConn){
+        navigator.connection.removeEventListener('change',prev.params._cleanConn);
+        prev.params._cleanConn=null;
+      }
+    }
+  }
+  if(updTimer&&view!=='arrivals'){clearInterval(updTimer);updTimer=null;$('upd').textContent='';}
   if(view!=='home'){subQueue=[];}
 
   $('back').style.visibility=navStack.length>1?'visible':'hidden';
@@ -574,12 +742,38 @@ function render(){
 }
 
 $('hdr').addEventListener('click',reset);
-$('back').addEventListener('click',pop);
+$('back').addEventListener('click',()=>{hap(8);pop();});
 $('ebtn').addEventListener('click',()=>{editing=!editing;render();});
 
-function updateOffline(){$('off').style.display=navigator.onLine?'none':'block';}
-window.addEventListener('online',updateOffline);
-window.addEventListener('offline',updateOffline);
+// Swipe-back from left edge
+let swipeStart=null;
+document.addEventListener('touchstart',e=>{
+  if(navStack.length>1&&e.touches[0].clientX<24)swipeStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
+  else swipeStart=null;
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if(!swipeStart)return;
+  const dx=e.touches[0].clientX-swipeStart.x;
+  const dy=Math.abs(e.touches[0].clientY-swipeStart.y);
+  if(dx>60&&dy<40){swipeStart=null;hap(8);pop();}
+  else if(dy>20)swipeStart=null;
+},{passive:true});
+
+function updateOffline(){
+  $('off').style.display=navigator.onLine?'none':'block';
+}
+window.addEventListener('online',()=>{
+  updateOffline();
+  if(refreshTimer===null&&navStack.length&&navStack[navStack.length-1].view==='arrivals'){
+    render();
+  }else if(navStack.length&&navStack[navStack.length-1].view==='home'){
+    subQueue=[];favs.forEach(f=>enqueueSub(f));
+  }
+});
+window.addEventListener('offline',()=>{
+  updateOffline();
+  if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}
+});
 updateOffline();
 
 document.addEventListener('visibilitychange',()=>{
@@ -590,15 +784,20 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 
+// BroadcastChannel: SW notifies when it gets a fresh /a response
+try{
+  const swbc=new BroadcastChannel('nt');
+  swbc.onmessage=ev=>{
+    if(ev.data&&ev.data.type==='fresh'&&navStack.length&&navStack[navStack.length-1].view==='home')render();
+  };
+}catch(_){}
+
 (async()=>{
-  const c=localStorage.getItem(K_STA);
-  if(c)try{stations=parseStations(new Uint8Array(JSON.parse(c)));}catch(_){}
   navStack=[{view:'home',params:{}}];
   render();
   try{
     const bytes=await api('/s');
     stations=parseStations(bytes);
-    localStorage.setItem(K_STA,JSON.stringify([...bytes]));
     render();
   }catch(_){}
 })();
