@@ -1,273 +1,562 @@
-<!DOCTYPE html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,user-scalable=no"><meta name=theme-color content=#000><link rel=manifest href=manifest.json><title>NextTrain</title><style>
+<!DOCTYPE html>
+<html lang=en>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name=theme-color content=#fff>
+<link rel=manifest href=manifest.json>
+<title>NextTrain</title>
+<style>
 :root{--bg:#fff;--fg:#000;--gray:#888;--light:#ddd;--green:#008000;--red:#c00;--bnr:#fff;--bnrf:#000}
 body.dk{--bg:#000;--fg:#fff;--gray:#aaa;--light:#333;--green:#0f0;--red:#f33;--bnr:#000;--bnrf:#fff}
 *{box-sizing:border-box}
 body{margin:0;font:16px system-ui,sans-serif;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent}
-#a{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-header{background:var(--bnr);color:var(--bnrf);padding:8px;text-align:center;font-weight:900;letter-spacing:1px;cursor:pointer;z-index:10;font-size:1.2rem;transition:background 0.2s}
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+header{background:var(--bnr);color:var(--bnrf);padding:8px;text-align:center;font-weight:900;letter-spacing:1px;cursor:pointer;z-index:10;font-size:1.2rem}
 .nav{display:flex;align-items:center;background:var(--bg);border-bottom:1px solid var(--light);min-height:44px;padding:0 8px}
 .nav h2{margin:0;font-size:1rem;flex:1;text-align:center;font-weight:700;color:var(--fg)}
-.nav button{background:none;border:none;color:var(--fg);font-size:1.5rem;padding:0 8px;cursor:pointer;width:40px}
-#L{flex:1;overflow-y:auto}
+.nav button{background:none;border:none;color:var(--fg);font-size:1.5rem;padding:0 8px;cursor:pointer;width:40px;line-height:1}
+#list{flex:1;overflow-y:auto}
 .p{padding:20px;text-align:center;color:var(--gray)}
-.i{padding:12px;border-bottom:1px solid var(--light);display:flex;align-items:center;min-height:56px}
-.i:active{background:rgba(128,128,128,0.1)}
-.ic{width:44px;height:44px;position:relative;margin-right:12px;flex-shrink:0}
+.row{padding:12px;border-bottom:1px solid var(--light);display:flex;align-items:center;min-height:56px;cursor:pointer}
+.row:active{background:rgba(128,128,128,.1)}
+.ic{width:44px;height:44px;margin-right:12px;flex-shrink:0}
 .tx{flex:1;overflow:hidden}
 .t1{font-weight:700;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .t2{font-size:14px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.act{color:var(--fg);justify-content:center;font-weight:500;min-height:44px}
-.chk{width:22px;height:22px;border:2px solid var(--fg);margin-left:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.chk.on::after{content:'\2713';font-size:18px}
+.t2.g{color:var(--green)}
+.t2.r{color:var(--red)}
+.act{justify-content:center;font-weight:500;min-height:44px}
+.chk{width:22px;height:22px;border:2px solid var(--fg);margin-left:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
 .ar{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--light)}
 .ar-l{display:flex;align-items:center;gap:12px}
 .ar-r{text-align:right}
 .tm{font-size:20px;font-weight:700}
 .st{font-size:14px;font-weight:700}
-.st.green{color:var(--green)}
-.st.red{color:var(--red)}
+.st.g{color:var(--green)}
+.st.r{color:var(--red)}
 .hs{font-size:14px;color:var(--gray)}
-#b{position:fixed;top:0;left:0;right:0;height:2px;background:#29f;display:none;z-index:11}
+#bar{position:fixed;top:0;left:0;right:0;height:2px;background:#29f;display:none;z-index:11}
 input{background:var(--light);color:var(--fg);border:1px solid var(--light);padding:8px;border-radius:4px;width:100%;font-size:16px}
 .sb{padding:10px;border-bottom:1px solid var(--light)}
 .tg{display:flex;align-items:center;justify-content:space-between;width:100%}
 .sec{background:var(--light);padding:4px 12px;font-size:12px;font-weight:700;color:var(--gray)}
-.ed{display:flex;gap:8px;margin-left:8px}
-.ed b{padding:4px 8px;border:1px solid var(--light);border-radius:4px;font-size:14px}
+.edbtn{padding:4px 8px;border:1px solid var(--fg);border-radius:4px;font-size:14px;cursor:pointer;background:var(--bg);color:var(--fg);margin-left:4px;line-height:1.4}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;display:flex;flex-direction:column;justify-content:flex-end}
+.sheet{background:var(--bg);border-top:2px solid var(--light)}
+.s-item{padding:16px;border-bottom:1px solid var(--light);text-align:center;font-size:16px;cursor:pointer;color:var(--fg)}
+.s-item:active{background:rgba(128,128,128,.1)}
+.s-del{color:var(--red)}
 </style>
-<div id=b></div>
-<div id=a>
-<header onclick="stk=[{v:'home'}];render()">NextTrain</header>
-<div class=nav><button id=back style="visibility:hidden">&lsaquo;</button><h2 id=sub></h2><button id=eb>&vellip;</button></div>
-<div id=L></div>
+<div id=bar></div>
+<div id=app>
+  <header id=hdr>NextTrain</header>
+  <div class=nav>
+    <button id=back style=visibility:hidden>&#8249;</button>
+    <h2 id=sub></h2>
+    <button id=ebtn>&#8942;</button>
+  </div>
+  <div id=list></div>
 </div>
 <script>
-const W='https://nt.sloccy.workers.dev',C='nt_s',F='nt_f',T='nt_t',R='nt_r',e=i=>document.getElementById(i),t=new TextDecoder;
-let S=[],f=[],rs=null,dk=0,ed=0,stk=[],cache={};
+const WORKER='https://nt.sloccy.workers.dev';
+const K_STA='nt_s',K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r';
+const DEC=new TextDecoder();
+const D2L={'0':'N','1':'S','2':'E','3':'W'};
+const L2D={'N':'0','S':'1','E':'2','W':'3'};
 
-try{f=JSON.parse(localStorage.getItem(F))||[]}catch(e){f=[]}
-if(!Array.isArray(f))f=[];
-try{rs=JSON.parse(localStorage.getItem(R))}catch(e){rs=null}
-dk=localStorage.getItem(T)=='1';
+let stations=[],favs=[],recent=null,dark=false;
+let editing=false,navStack=[],arrCache={},refreshTimer=null;
 
-if(dk)document.body.classList.add('dk');
+try{favs=JSON.parse(localStorage.getItem(K_FAV))||[];}catch(_){favs=[];}
+if(!Array.isArray(favs))favs=[];
+try{recent=JSON.parse(localStorage.getItem(K_REC));}catch(_){recent=null;}
+dark=localStorage.getItem(K_DARK)==='1';
+if(dark)document.body.classList.add('dk');
 
-const api=async p=>{e('b').style.display='block';try{const r=await fetch(W+p);if(!r.ok)throw r;return {b:new Uint8Array(await r.arrayBuffer()),h:r.headers}}catch(err){console.error(err);throw err}finally{e('b').style.display='none'}};
-const ps=b=>{if(!b||b.length<6)return [];try{let p=6,c=b[4]|b[5]<<8,res=[];for(let i=0;i<c;i++){let l=b[p++];if(l===undefined)break;let s=t.decode(b.subarray(p,p+l));p+=l;let rc=b[p++];if(rc===undefined)break;let rs=[];for(let j=0;j<rc;j++){let r=b[p++],g=b[p++],bl=b[p++],rl=b[p++],rn=t.decode(b.subarray(p,p+rl));p+=rl;let d=String.fromCharCode(b[p++]),hl=b[p++],h=t.decode(b.subarray(p,p+hl));p+=hl;rs.push({c:`rgb(${r},${g},${bl})`,n:rn,d,h})}res.push({s,r:rs,n:s.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())})}return res}catch(e){console.error(e);return []}};
+const $=id=>document.getElementById(id);
 
-const go=(v,p)=>{stk.push({v,p});render()};
-const pop=()=>{if(stk.length>1){stk.pop();render()}};
-e('back').onclick=pop;
-e('eb').onclick=()=>{ed=!ed;render()};
+async function api(path){
+  $('bar').style.display='block';
+  try{
+    const res=await fetch(WORKER+path);
+    if(!res.ok)throw new Error(res.status);
+    return new Uint8Array(await res.arrayBuffer());
+  }finally{$('bar').style.display='none';}
+}
 
-const drawIcon=(s,fav)=>{
-  const n=Math.min(fav?.routes?.length||0,4);
-  const cv=document.createElement('canvas');cv.width=cv.height=44;const x=cv.getContext('2d');
+function fmtTime(mins){
+  const d=new Date();
+  d.setHours(Math.floor(mins/60),mins%60,0,0);
+  return d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+}
+
+function stLabel(st){
+  if(st===-128)return{lbl:'Canceled',cls:'r'};
+  if(st===-127)return{lbl:'Skipped',cls:'r'};
+  if(st===-126)return{lbl:'On time',cls:'g'};
+  if(st>0)return{lbl:'Delayed '+st+'m',cls:'r'};
+  if(st<0)return{lbl:'Early '+Math.abs(st)+'m',cls:'g'};
+  return{lbl:'Scheduled',cls:''};
+}
+
+function parseStations(b){
+  if(!b||b.length<6)return[];
+  try{
+    let p=6,cnt=b[4]|(b[5]<<8),out=[];
+    for(let i=0;i<cnt;i++){
+      const sl=b[p++];
+      const slug=DEC.decode(b.subarray(p,p+sl));p+=sl;
+      const rc=b[p++],routes=[];
+      for(let j=0;j<rc;j++){
+        const r=b[p++],g=b[p++],bl=b[p++],rl=b[p++];
+        const name=DEC.decode(b.subarray(p,p+rl));p+=rl;
+        const dir=String.fromCharCode(b[p++]);
+        const hl=b[p++];
+        const headsign=DEC.decode(b.subarray(p,p+hl));p+=hl;
+        routes.push({c:`rgb(${r},${g},${bl})`,n:name,d:dir,h:headsign});
+      }
+      out.push({s:slug,n:slug.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase()),r:routes});
+    }
+    return out;
+  }catch(_){return[];}
+}
+
+function parseArrivals(b){
+  if(!b||!b.length)return[];
+  const out=[];
+  try{
+    let p=1;
+    for(let i=0;i<b[0];i++){
+      const rl=b[p++];
+      const rn=DEC.decode(b.subarray(p,p+rl));p+=rl;
+      const dir=String.fromCharCode(b[p++]);
+      const mins=(b[p++]<<8)|b[p++];
+      const st=new Int8Array([b[p++]])[0];
+      out.push({rn,dir,mins,st});
+    }
+  }catch(_){}
+  return out;
+}
+
+function drawIcon(sta,fav){
+  const cv=document.createElement('canvas');
+  cv.width=cv.height=44;
+  const ctx=cv.getContext('2d');
+  const rts=((fav&&fav.routes)||[]).map(fr=>{
+    const letter=D2L[fr.d]||fr.d;
+    return((sta&&sta.r)||[]).find(r=>r.n[0]===fr.r&&r.d===letter);
+  }).filter(Boolean);
+  const n=Math.min(rts.length,4);
   if(!n)return cv.toDataURL();
-  const rts=(fav.routes||[]).map(fr=>{
-    const d={0:'N',1:'S',2:'E',3:'W'};
-    return (s?.r||[]).find(r=>r.n[0]==fr.r&&r.d==d[fr.d]);
-  }).filter(x=>x);
-  if(!rts.length)return cv.toDataURL();
 
-  const mid=18,ox=4,oy=4,e=35;
-  const rr=(ctx,x,y,w,h,r)=>{if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);else{ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()}};
-  if(rts.length==1){
-    x.fillStyle=rts[0].c;x.beginPath();rr(x,ox,oy,36,36,3);x.fill();
-    x.fillStyle='#fff';x.font='bold 24px system-ui';x.textAlign='center';x.textBaseline='middle';
-    x.fillText(rts[0].n[0],22,23);
-    x.strokeStyle='#000';x.lineWidth=1;x.strokeText(rts[0].n[0],22,23);
+  const ox=4,oy=4,sz=36,mid=18,e=35;
+  const rr=(x,y,w,h,rad)=>{
+    if(ctx.roundRect){ctx.roundRect(x,y,w,h,rad);return;}
+    ctx.beginPath();
+    ctx.moveTo(x+rad,y);ctx.lineTo(x+w-rad,y);ctx.quadraticCurveTo(x+w,y,x+w,y+rad);
+    ctx.lineTo(x+w,y+h-rad);ctx.quadraticCurveTo(x+w,y+h,x+w-rad,y+h);
+    ctx.lineTo(x+rad,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-rad);
+    ctx.lineTo(x,y+rad);ctx.quadraticCurveTo(x,y,x+rad,y);ctx.closePath();
+  };
+
+  if(n===1){
+    ctx.fillStyle=rts[0].c;ctx.beginPath();rr(ox,oy,sz,sz,3);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='bold 24px system-ui';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(rts[0].n[0],22,23);
+    ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.strokeText(rts[0].n[0],22,23);
   }else{
-    x.fillStyle='#fff';x.fillRect(ox,oy,36,36);
-    let segs=[0,0,1,1,1,1,0,0]; // 2 routes
-    if(n==3) segs=[0,1,1,2,2,2,2,0];
-    if(n==4) segs=[0,1,1,3,3,2,2,0];
-    const pts=[[ox,oy,ox+mid,oy],[ox+mid,oy,ox+e,oy],[ox+e,oy,ox+e,oy+mid],[ox+e,oy+mid,ox+e,oy+e],[ox+e,oy+e,ox+mid,oy+e],[ox+mid,oy+e,ox,oy+e],[ox,oy+e,ox,oy+mid],[ox,oy+mid,ox,oy]];
-    x.lineWidth=2;
-    segs.forEach((ri,i)=>{if(rts[ri]){x.strokeStyle=rts[ri].c;x.beginPath();x.moveTo(pts[i][0],pts[i][1]);x.lineTo(pts[i][2],pts[i][3]);x.stroke()}});
-    x.fillStyle='#000';x.font='bold 14px system-ui';x.textAlign='center';x.textBaseline='middle';
+    ctx.fillStyle='#fff';ctx.fillRect(ox,oy,sz,sz);
+    const SM={2:[0,0,1,1,1,1,0,0],3:[0,1,1,2,2,2,2,0],4:[0,1,1,3,3,2,2,0]};
+    const segs=SM[n]||SM[2];
+    const pts=[
+      [ox,oy,ox+mid,oy],[ox+mid,oy,ox+e,oy],[ox+e,oy,ox+e,oy+mid],[ox+e,oy+mid,ox+e,oy+e],
+      [ox+e,oy+e,ox+mid,oy+e],[ox+mid,oy+e,ox,oy+e],[ox,oy+e,ox,oy+mid],[ox,oy+mid,ox,oy]
+    ];
+    ctx.lineWidth=2;
+    segs.forEach((ri,i)=>{
+      if(!rts[ri])return;
+      ctx.strokeStyle=rts[ri].c;
+      ctx.beginPath();ctx.moveTo(pts[i][0],pts[i][1]);ctx.lineTo(pts[i][2],pts[i][3]);ctx.stroke();
+    });
     const slots=[[ox+9,oy+9],[ox+27,oy+9],[ox+9,oy+27],[ox+27,oy+27]];
-    if(n==2){x.fillText(rts[0].n[0],slots[0][0],slots[0][1]);x.fillText(rts[1].n[0],slots[3][0],slots[3][1])}
-    else if(n==3){x.fillText(rts[0].n[0],slots[0][0],slots[0][1]);x.fillText(rts[1].n[0],slots[1][0],slots[1][1]);x.fillText(rts[2].n[0],22,oy+27)}
-    else{rts.forEach((r,i)=>x.fillText(r.n[0],slots[i][0],slots[i][1]))}
+    ctx.fillStyle='#000';ctx.font='bold 14px system-ui';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    if(n===2){ctx.fillText(rts[0].n[0],slots[0][0],slots[0][1]);ctx.fillText(rts[1].n[0],slots[3][0],slots[3][1]);}
+    else if(n===3){ctx.fillText(rts[0].n[0],slots[0][0],slots[0][1]);ctx.fillText(rts[1].n[0],slots[1][0],slots[1][1]);ctx.fillText(rts[2].n[0],22,oy+27);}
+    else{rts.forEach((rt,i)=>ctx.fillText(rt.n[0],slots[i][0],slots[i][1]));}
   }
-  const ds=new Set((fav.routes||[]).map(r=>r.d));
-  x.fillStyle='#c00';
-  const ar=(cx,cy,rot)=>{x.save();x.translate(cx,cy);x.rotate(rot);x.beginPath();x.moveTo(0,-4);x.lineTo(-3,1);x.lineTo(3,1);x.fill();x.strokeStyle='#000';x.lineWidth=0.5;x.stroke();x.restore()};
-  if(ds.has('0'))ar(22,2,0);if(ds.has('1'))ar(22,42,Math.PI);if(ds.has('2'))ar(42,22,Math.PI/2);if(ds.has('3'))ar(2,22,-Math.PI/2);
+
+  const dirs=new Set(((fav&&fav.routes)||[]).map(rt=>rt.d));
+  ctx.fillStyle='#c00';
+  const ar=(cx,cy,rot)=>{
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
+    ctx.beginPath();ctx.moveTo(0,-4);ctx.lineTo(-3,1);ctx.lineTo(3,1);ctx.fill();
+    ctx.strokeStyle='#000';ctx.lineWidth=0.5;ctx.stroke();ctx.restore();
+  };
+  if(dirs.has('0'))ar(22,2,0);
+  if(dirs.has('1'))ar(22,42,Math.PI);
+  if(dirs.has('2'))ar(42,22,Math.PI/2);
+  if(dirs.has('3'))ar(2,22,-Math.PI/2);
   return cv.toDataURL();
-};
+}
 
-const render=()=>{
-  if(!stk.length)return;
-  try{
-    const {v,p}=stk[stk.length-1];
-    e('back').style.visibility=stk.length>1?'visible':'hidden';
-    e('eb').style.display=(v=='home')?'block':'none';
-    e('sub').innerText=(v=='home')?'':(p?.s?.n||'');
-    const L=e('L');L.innerHTML='';
-    
-    if(v=='home'){
-      try{rs=JSON.parse(localStorage.getItem(R)||'null')}catch(e){rs=null}
-      if(f && f.length) L.insertAdjacentHTML('beforeend','<div class=sec>FAVORITES</div>');
-      (f||[]).forEach((fav,i)=>{
-        try{
-          const s=(S||[]).find(x=>x.s==fav.s);
-          const div=document.createElement('div');div.className='i';
-          const cData=cache[fav.s+fav.r]||{txt:'Loading...',cls:''};
-          div.innerHTML=`<div class=ic><img src="${drawIcon(s,fav)}" width=44 height=44></div><div class=tx><div class=t1>${fav.n||s?.n||fav.s}</div><div class="t2 ${cData.cls}">${cData.txt}</div></div>`;
-          if(ed){
-            const ctr=document.createElement('div');ctr.className='ed';
-            ctr.innerHTML=`<b onclick="event.stopPropagation();move(${i},-1)">\u2191</b><b onclick="event.stopPropagation();move(${i},1)">\u2193</b><b onclick="event.stopPropagation();ren(${i})">R</b>`;
-            div.appendChild(ctr);
-          }
-          div.onclick=()=>go('arrivals',{s,fav});
-          L.appendChild(div);
-          if(!cache[fav.s+fav.r]) fetchSub(fav);
-        }catch(err){console.error(err)}
+function showSheet(items){
+  return new Promise(resolve=>{
+    const bg=document.createElement('div');bg.className='sheet-bg';
+    const sh=document.createElement('div');sh.className='sheet';
+    const done=v=>{document.body.removeChild(bg);resolve(v);};
+    items.forEach(({label,value,del})=>{
+      const d=document.createElement('div');
+      d.className='s-item'+(del?' s-del':'');
+      d.textContent=label;
+      d.addEventListener('click',()=>done(value));
+      sh.appendChild(d);
+    });
+    const cancel=document.createElement('div');
+    cancel.className='s-item s-del';cancel.textContent='Cancel';
+    cancel.addEventListener('click',()=>done(null));
+    sh.appendChild(cancel);
+    bg.appendChild(sh);
+    bg.addEventListener('click',ev=>{if(ev.target===bg)done(null);});
+    document.body.appendChild(bg);
+  });
+}
+
+function push(view,params){navStack.push({view,params:params||{}});render();}
+function pop(){if(navStack.length>1){navStack.pop();render();}}
+function reset(){navStack=[{view:'home',params:{}}];editing=false;render();}
+function saveFavs(){localStorage.setItem(K_FAV,JSON.stringify(favs));}
+
+function viewHome(L){
+  if(favs.length){
+    const sec=document.createElement('div');
+    sec.className='sec';sec.textContent='FAVORITES';
+    L.appendChild(sec);
+  }
+  favs.forEach((fav,idx)=>{
+    const sta=stations.find(s=>s.s===fav.s);
+    const cached=arrCache[fav.s+fav.r];
+    const row=document.createElement('div');row.className='row';
+
+    const img=document.createElement('img');
+    img.className='ic';img.width=img.height=44;img.src=drawIcon(sta,fav);
+
+    const tx=document.createElement('div');tx.className='tx';
+    const t1=document.createElement('div');t1.className='t1';
+    t1.textContent=fav.n||(sta&&sta.n)||fav.s;
+    const t2=document.createElement('div');
+    t2.className='t2'+(cached&&cached.cls?' '+cached.cls:'');
+    t2.textContent=cached?cached.txt:'Loading…';
+    tx.appendChild(t1);tx.appendChild(t2);
+    row.appendChild(img);row.appendChild(tx);
+
+    if(editing){
+      const btns=document.createElement('div');
+      btns.style.cssText='display:flex;gap:3px;margin-left:6px;flex-shrink:0';
+      [
+        {l:'↑',fn:()=>{if(idx>0){[favs[idx],favs[idx-1]]=[favs[idx-1],favs[idx]];saveFavs();render();}}},
+        {l:'↓',fn:()=>{if(idx<favs.length-1){[favs[idx],favs[idx+1]]=[favs[idx+1],favs[idx]];saveFavs();render();}}},
+        {l:'R',fn:()=>{const n=prompt('Name?',fav.n||(sta&&sta.n)||fav.s);if(n!==null){fav.n=n;saveFavs();render();}}},
+        {l:'×',fn:async()=>{const v=await showSheet([{label:'Confirm Delete',value:'del',del:true}]);if(v==='del'){favs.splice(idx,1);saveFavs();render();}}}
+      ].forEach(({l,fn})=>{
+        const btn=document.createElement('button');
+        btn.className='edbtn';btn.textContent=l;
+        btn.addEventListener('click',ev=>{ev.stopPropagation();fn();});
+        btns.appendChild(btn);
       });
-      if(rs){
-        try{
-          const s=(S||[]).find(x=>x.s==rs.s);
-          const div=document.createElement('div');div.className='i';
-          div.innerHTML=`<div class=ic><img src="${drawIcon(s,rs)}" width=44 height=44></div><div class=tx><div class=t1>${s?.n||rs.s}</div><div class=t2>Tap to view</div></div>`;
-          div.onclick=()=>go('arrivals',{s,r:rs.r});
-          L.appendChild(div);
-        }catch(err){console.error(err)}
-      }
-      L.insertAdjacentHTML('beforeend','<div class="i act" onclick="go(\'picker\',{q:\'\'})">+ New Search</div><div class="i act" onclick="go(\'settings\')">Settings</div>');
+      row.appendChild(btns);
     }
-    
-    if(v=='picker'){
-      e('sub').innerText='Select Station';
-      const box=document.createElement('div');box.className='sb';
-      box.innerHTML=`<input id=si placeholder="Search stations..." value="${p.q||''}">`;
-      L.appendChild(box);
-      const input=e('si');setTimeout(()=>input.focus(),50);
-      input.oninput=()=>{p.q=input.value.toLowerCase();renderList()};
-      const listDiv=document.createElement('div');L.appendChild(listDiv);
-      const renderList=()=>{
-        listDiv.innerHTML='';
-        const filtered=S.filter(s=>s.n.toLowerCase().includes(p.q));
-        if(!filtered.length) listDiv.innerHTML='<div class=p>No stations found</div>';
-        filtered.forEach(s=>{
-          const div=document.createElement('div');div.className='i';
-          div.innerHTML=`<div class=tx><div class=t1>${s.n}</div></div>`;
-          div.onclick=()=>go('routes',{s,sel:[]});
-          listDiv.appendChild(div);
+
+    row.addEventListener('click',()=>push('arrivals',{sta,fav}));
+    L.appendChild(row);
+    if(!cached)fetchFavSub(fav);
+  });
+
+  if(recent){
+    try{
+      const sta=stations.find(s=>s.s===recent.s);
+      const row=document.createElement('div');row.className='row';
+      const img=document.createElement('img');
+      img.className='ic';img.width=img.height=44;img.src=drawIcon(sta,recent);
+      const tx=document.createElement('div');tx.className='tx';
+      const t1=document.createElement('div');t1.className='t1';t1.textContent=(sta&&sta.n)||recent.s;
+      const t2=document.createElement('div');t2.className='t2';t2.textContent='Tap to view';
+      tx.appendChild(t1);tx.appendChild(t2);
+      row.appendChild(img);row.appendChild(tx);
+      row.addEventListener('click',()=>push('arrivals',{sta,r:recent.r,routes:recent.routes}));
+      L.appendChild(row);
+    }catch(_){}
+  }
+
+  const ns=document.createElement('div');ns.className='row act';ns.textContent='+ New Search';
+  ns.addEventListener('click',()=>push('picker',{q:''}));
+  L.appendChild(ns);
+
+  const sg=document.createElement('div');sg.className='row act';sg.textContent='Settings';
+  sg.addEventListener('click',()=>push('settings'));
+  L.appendChild(sg);
+}
+
+function viewPicker(L,params){
+  const sb=document.createElement('div');sb.className='sb';
+  const inp=document.createElement('input');
+  inp.placeholder='Search stations…';inp.value=params.q||'';
+  sb.appendChild(inp);L.appendChild(sb);
+  const ld=document.createElement('div');L.appendChild(ld);
+  const redraw=()=>{
+    ld.innerHTML='';
+    const q=(params.q||'').toLowerCase();
+    const flt=stations.filter(s=>s.n.toLowerCase().includes(q));
+    if(!flt.length){ld.innerHTML='<div class=p>No stations found</div>';return;}
+    flt.forEach(sta=>{
+      const row=document.createElement('div');row.className='row';
+      const tx=document.createElement('div');tx.className='tx';
+      const t1=document.createElement('div');t1.className='t1';t1.textContent=sta.n;
+      tx.appendChild(t1);row.appendChild(tx);
+      row.addEventListener('click',()=>push('routes',{sta,sel:[]}));
+      ld.appendChild(row);
+    });
+  };
+  inp.addEventListener('input',()=>{params.q=inp.value;redraw();});
+  redraw();
+  setTimeout(()=>inp.focus(),50);
+}
+
+function viewRoutes(L,params){
+  const{sta,sel}=params;
+  if(!sta)return;
+  (sta.r||[]).forEach((rt,idx)=>{
+    const row=document.createElement('div');row.className='row';
+    const on=sel.includes(idx);
+    const img=document.createElement('img');
+    img.className='ic';img.width=img.height=44;
+    img.src=drawIcon(sta,{routes:[{r:rt.n[0],d:L2D[rt.d]}]});
+    const tx=document.createElement('div');tx.className='tx';
+    const t1=document.createElement('div');t1.className='t1';t1.textContent=rt.h;
+    const t2=document.createElement('div');t2.className='t2';t2.textContent='('+rt.d+')';
+    tx.appendChild(t1);tx.appendChild(t2);
+    const chk=document.createElement('div');
+    chk.className='chk'+(on?' on':'');
+    if(on)chk.textContent='✓';
+    row.appendChild(img);row.appendChild(tx);row.appendChild(chk);
+    row.addEventListener('click',()=>{
+      params.sel=on?sel.filter(x=>x!==idx):[...sel,idx];
+      render();
+    });
+    L.appendChild(row);
+  });
+  if(sel.length){
+    const btn=document.createElement('div');btn.className='row act';btn.textContent='Show Arrivals';
+    btn.addEventListener('click',()=>{
+      const rParam=sel.map(i=>sta.r[i].n[0]+L2D[sta.r[i].d]).join('');
+      const routes=sel.map(i=>({r:sta.r[i].n[0],d:L2D[sta.r[i].d]}));
+      recent={s:sta.s,r:rParam,routes};
+      localStorage.setItem(K_REC,JSON.stringify(recent));
+      push('arrivals',{sta,r:rParam,routes});
+    });
+    L.appendChild(btn);
+  }
+}
+
+function viewArrivals(L,params){
+  const{sta,fav,r,routes}=params;
+  const rParam=fav?fav.r:r;
+  const rList=fav?fav.routes:routes;
+  if(!sta){L.innerHTML='<div class=p>Station data not loaded</div>';return;}
+
+  const cont=document.createElement('div');
+  cont.innerHTML='<div class=p>…</div>';
+  L.appendChild(cont);
+
+  if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}
+
+  const load=async()=>{
+    try{
+      const bytes=await api('/a?s='+sta.s+'&r='+rParam);
+      cont.innerHTML='';
+      const arrivals=parseArrivals(bytes);
+      const isFav=favs.find(f=>f.s===sta.s&&f.r===rParam);
+
+      if(!isFav){
+        const addBtn=document.createElement('div');addBtn.className='row act';
+        addBtn.textContent='☆ Add Favorite';
+        addBtn.addEventListener('click',()=>{
+          favs.push({s:sta.s,r:rParam,n:sta.n,routes:rList||[]});
+          saveFavs();reset();
         });
-      };
-      renderList();
-    }
-    
-    if(v=='routes'){
-      p.s.r.forEach((r,i)=>{
-        const div=document.createElement('div');div.className='i';
-        const is=p.sel.includes(i);
-        div.innerHTML=`<div class=ic><img src="${drawIcon(p.s,{routes:[{r:r.n[0],d:({N:'0',S:'1',E:'2',W:'3'})[r.d]}]})}" width=44 height=44></div><div class=tx><div class=t1>${r.h}</div><div class=t2>(${r.d})</div></div><div class="chk${is?' on':''}"></div>`;
-        div.onclick=()=>{if(is)p.sel=p.sel.filter(x=>x!=i);else p.sel.push(i);render()};
-        L.appendChild(div);
-      });
-      if(p.sel.length){
-        const ok=document.createElement('div');ok.className='i act';ok.innerText='Show Arrivals';
-        ok.onclick=()=>{
-          const dm={N:'0',S:'1',E:'2',W:'3'};
-          const rp=p.sel.map(i=>p.s.r[i].n[0]+dm[p.s.r[i].d]).join('');
-          const rss={s:p.s.s,r:rp,routes:p.sel.map(i=>({r:p.s.r[i].n[0],d:dm[p.s.r[i].d]}))};
-          localStorage.setItem(R,JSON.stringify(rss));
-          rs=rss;
-          go('arrivals',{s:p.s,r:rp});
-        };
-        L.appendChild(ok);
+        cont.appendChild(addBtn);
       }
-    }
-    
-    if(v=='arrivals'){
-      const rParam=p.fav?p.fav.r:p.r;
-      if(!p.s){const d=document.createElement('div');d.className='p';d.textContent='Station data not loaded';L.appendChild(d);return;}
-      const isF=f.find(x=>x.s==p.s.s&&x.r==rParam);
-      const listCont=document.createElement('div');L.appendChild(listCont);
-      listCont.innerHTML='<div class=p>...</div>';
-      (async()=>{
-        try {
-          const {b}=await api('/a?s='+p.s.s+'&r='+rParam);
-          listCont.innerHTML='';
-          if(!isF){
-            const addBtn=document.createElement('div');addBtn.className='i act';addBtn.innerText='\u2606 Add Favorite';
-            addBtn.onclick=()=>{
-              const routes=[];for(let i=0;i<rParam.length;i+=2)routes.push({r:rParam[i],d:rParam[i+1]});
-              f.push({s:p.s.s,r:rParam,n:p.s.n,routes});
-              localStorage.setItem(F,JSON.stringify(f));
-              stk=[{v:'home'}];render();
-            };
-            listCont.appendChild(addBtn);
-          }
-          let ptr=1;
-          for(let i=0;i<b[0];i++){
-            let rl=b[ptr++],rn=t.decode(b.subarray(ptr,ptr+rl));ptr+=rl;
-            let D=String.fromCharCode(b[ptr++]),m=b[ptr++]<<8|b[ptr++],st=new Int8Array([b[ptr++]])[0];
-            let x=p.s.r.find(r=>r.n==rn&&r.d==D)||{c:'#888',h:''},lbl="Scheduled",cls='';
-            if(st==-128) {lbl="Canceled";cls='red'}
-            else if(st==-127) {lbl="Skipped";cls='red'}
-            else if(st==-126) {lbl="On time";cls='green'}
-            else if(st>0) {lbl="Delayed "+st+"m";cls='red'}
-            else if(st<0) {lbl="Early "+Math.abs(st)+"m";cls='green'}
-            const T=new Date;T.setHours(Math.floor(m/60),m%60);
-            const timeStr=T.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-            if(i==0) cache[p.s.s+rParam]={txt:`Next: ${timeStr} (${rn})`,cls};
-            const div=document.createElement('div');div.className='ar';
-            div.innerHTML=`<div class=ar-l><img src="${drawIcon(p.s,{routes:[{r:rn[0],d:({N:'0',S:'1',E:'2',W:'3'})[D]}]})}" width=44 height=44><div class=tx><div class=hs>${x.h}</div><div class="st ${cls}">${lbl}</div></div></div><div class=ar-r><div class=tm>${timeStr}</div><div class=hs>${rn}</div></div>`;
-            listCont.appendChild(div);
-          }
-          if(!b[0])listCont.insertAdjacentHTML('beforeend','<div class=p>No arrivals</div>');
-          if(isF){
-            const remBtn=document.createElement('div');remBtn.className='i act';remBtn.innerText='\u2605 Remove Favorite';
-            remBtn.onclick=()=>{f=f.filter(x=>!(x.s==p.s.s&&x.r==rParam));localStorage.setItem(F,JSON.stringify(f));render()};
-            listCont.appendChild(remBtn);
-          }
-        } catch(e) { listCont.innerHTML='<div class=p>Error</div>' }
-      })();
-    }
 
-    if(v=='settings'){
-      e('sub').innerText='Settings';
-      const setDiv=document.createElement('div');L.appendChild(setDiv);
-      setDiv.innerHTML=`<div class=i id=dt><div class=tg><span>Dark Mode</span><div class="chk${dk?' on':''}"></div></div></div><div class="i act" id=rf>Refresh Station Data</div>`;
-      e('dt').onclick=()=>{
-        dk=!dk;
-        localStorage.setItem(T,dk?1:0);
-        document.body.classList.toggle('dk',dk);
-        render();
-      };
-      e('rf').onclick=async()=>{
-        try{const {b}=await api('/s');S=ps(b);localStorage.setItem(C,JSON.stringify([...b]));alert('OK')}catch(e){alert('Err')}
-      };
+      if(!arrivals.length){
+        cont.insertAdjacentHTML('beforeend','<div class=p>No arrivals</div>');
+      }
+
+      arrivals.forEach((arr,i)=>{
+        const route=(sta.r||[]).find(rt=>rt.n===arr.rn&&rt.d===arr.dir)||{};
+        const{lbl,cls}=stLabel(arr.st);
+        const timeStr=fmtTime(arr.mins);
+        if(i===0)arrCache[sta.s+rParam]={txt:'Next: '+timeStr+' ('+arr.rn+')',cls};
+
+        const row=document.createElement('div');row.className='ar';
+        const left=document.createElement('div');left.className='ar-l';
+        const img=document.createElement('img');img.width=img.height=44;
+        img.src=drawIcon(sta,{routes:[{r:arr.rn[0],d:L2D[arr.dir]||arr.dir}]});
+        const info=document.createElement('div');
+        const hsDiv=document.createElement('div');hsDiv.className='hs';hsDiv.textContent=route.h||'';
+        const stDiv=document.createElement('div');stDiv.className='st'+(cls?' '+cls:'');stDiv.textContent=lbl;
+        info.appendChild(hsDiv);info.appendChild(stDiv);
+        left.appendChild(img);left.appendChild(info);
+
+        const right=document.createElement('div');right.className='ar-r';
+        const tm=document.createElement('div');tm.className='tm';tm.textContent=timeStr;
+        const rn=document.createElement('div');rn.className='hs';rn.textContent=arr.rn;
+        right.appendChild(tm);right.appendChild(rn);
+        row.appendChild(left);row.appendChild(right);
+        cont.appendChild(row);
+      });
+
+      if(isFav){
+        const remBtn=document.createElement('div');remBtn.className='row act';
+        remBtn.textContent='★ Remove Favorite';
+        remBtn.addEventListener('click',async()=>{
+          const v=await showSheet([{label:'Remove Favorite',value:'del',del:true}]);
+          if(v==='del'){favs=favs.filter(f=>!(f.s===sta.s&&f.r===rParam));saveFavs();render();}
+        });
+        cont.appendChild(remBtn);
+      }
+    }catch(_){
+      cont.innerHTML='<div class=p>Error loading arrivals</div>';
     }
-  }catch(err){console.error(err);try{const L=e('L');if(L)L.innerHTML='<div class=p>Something went wrong</div>';}catch(_){}}
-};
+  };
 
-window.move=(i,d)=>{const n=i+d;if(n>=0&&n<f.length){[f[i],f[n]]=[f[n],f[i]];localStorage.setItem(F,JSON.stringify(f));render()}};
-window.ren=(i)=>{const n=prompt('Name?',f[i].n||f[i].s);if(n){f[i].n=n;localStorage.setItem(F,JSON.stringify(f));render()}};
+  load();
+  refreshTimer=setInterval(load,60000);
+}
 
-const fetchSub=async(fav)=>{
+function viewSettings(L){
+  const dkRow=document.createElement('div');dkRow.className='row';
+  const tg=document.createElement('div');tg.className='tg';
+  const span=document.createElement('span');span.textContent='Dark Mode';
+  const chk=document.createElement('div');
+  chk.className='chk'+(dark?' on':'');
+  if(dark)chk.textContent='✓';
+  tg.appendChild(span);tg.appendChild(chk);dkRow.appendChild(tg);
+  dkRow.addEventListener('click',()=>{
+    dark=!dark;localStorage.setItem(K_DARK,dark?'1':'0');
+    document.body.classList.toggle('dk',dark);render();
+  });
+  L.appendChild(dkRow);
+
+  const efRow=document.createElement('div');efRow.className='row act';efRow.textContent='Edit Favorites';
+  efRow.addEventListener('click',()=>push('editFavs'));
+  L.appendChild(efRow);
+
+  const rfRow=document.createElement('div');rfRow.className='row act';rfRow.textContent='Refresh Station Data';
+  rfRow.addEventListener('click',async()=>{
+    rfRow.textContent='Refreshing…';
+    try{
+      const bytes=await api('/s');
+      stations=parseStations(bytes);
+      localStorage.setItem(K_STA,JSON.stringify([...bytes]));
+      rfRow.textContent='Done!';
+      setTimeout(()=>{rfRow.textContent='Refresh Station Data';},2000);
+    }catch(_){
+      rfRow.textContent='Error — tap to retry';
+    }
+  });
+  L.appendChild(rfRow);
+}
+
+function viewEditFavs(L){
+  if(!favs.length){L.innerHTML='<div class=p>No favorites</div>';return;}
+  favs.forEach((fav,idx)=>{
+    const sta=stations.find(s=>s.s===fav.s);
+    const row=document.createElement('div');row.className='row';
+    const img=document.createElement('img');
+    img.className='ic';img.width=img.height=44;img.src=drawIcon(sta,fav);
+    const tx=document.createElement('div');tx.className='tx';
+    const t1=document.createElement('div');t1.className='t1';t1.textContent=fav.n||(sta&&sta.n)||fav.s;
+    const t2=document.createElement('div');t2.className='t2';t2.textContent='⇅ tap to edit';
+    tx.appendChild(t1);tx.appendChild(t2);
+    row.appendChild(img);row.appendChild(tx);
+    row.addEventListener('click',async()=>{
+      const items=[];
+      if(idx>0)items.push({label:'↑ Move Up',value:'up'});
+      if(idx<favs.length-1)items.push({label:'↓ Move Down',value:'down'});
+      items.push({label:'Rename',value:'rename'});
+      items.push({label:'Delete',value:'delete',del:true});
+      const action=await showSheet(items);
+      if(!action)return;
+      if(action==='up'){[favs[idx],favs[idx-1]]=[favs[idx-1],favs[idx]];saveFavs();render();}
+      else if(action==='down'){[favs[idx],favs[idx+1]]=[favs[idx+1],favs[idx]];saveFavs();render();}
+      else if(action==='rename'){
+        const n=prompt('Name?',fav.n||(sta&&sta.n)||fav.s);
+        if(n!==null){fav.n=n;saveFavs();render();}
+      }else if(action==='delete'){
+        const v=await showSheet([{label:'Confirm Delete',value:'del',del:true}]);
+        if(v==='del'){favs.splice(idx,1);saveFavs();render();}
+      }
+    });
+    L.appendChild(row);
+  });
+}
+
+async function fetchFavSub(fav){
   try{
-    const {b}=await api('/a?s='+fav.s+'&r='+fav.r);
-    if(b[0]){
-      let ptr=1;ptr+=b[ptr]+1;ptr++;let m=b[ptr++]<<8|b[ptr++],st=new Int8Array([b[ptr++]])[0],cls='';
-      if(st==-128||st==-127||st<0)cls='red';else if(st==-126||st>0)cls='green';
-      const T=new Date;T.setHours(Math.floor(m/60),m%60);
-      cache[fav.s+fav.r]={txt:`Next: ${T.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`,cls};
-      if(stk[stk.length-1].v=='home')render();
+    const bytes=await api('/a?s='+fav.s+'&r='+fav.r);
+    const arr=parseArrivals(bytes);
+    if(arr.length){
+      const{cls}=stLabel(arr[0].st);
+      arrCache[fav.s+fav.r]={txt:'Next: '+fmtTime(arr[0].mins)+' ('+arr[0].rn+')',cls};
+      if(navStack.length&&navStack[navStack.length-1].view==='home')render();
     }
-  }catch(e){}
-};
+  }catch(_){}
+}
+
+function render(){
+  if(!navStack.length)return;
+  const{view,params}=navStack[navStack.length-1];
+
+  if(refreshTimer&&view!=='arrivals'){clearInterval(refreshTimer);refreshTimer=null;}
+
+  $('back').style.visibility=navStack.length>1?'visible':'hidden';
+  $('ebtn').style.display=view==='home'?'':'none';
+  const titles={
+    home:'',picker:'Select Station',
+    routes:(params.sta&&params.sta.n)||'',
+    arrivals:(params.sta&&params.sta.n)||(params.fav&&params.fav.n)||'',
+    settings:'Settings',editFavs:'Edit Favorites'
+  };
+  $('sub').textContent=titles[view]||'';
+
+  const L=$('list');L.innerHTML='';
+
+  if(view==='home')viewHome(L);
+  else if(view==='picker')viewPicker(L,params);
+  else if(view==='routes')viewRoutes(L,params);
+  else if(view==='arrivals')viewArrivals(L,params);
+  else if(view==='settings')viewSettings(L);
+  else if(view==='editFavs')viewEditFavs(L);
+}
+
+$('hdr').addEventListener('click',reset);
+$('back').addEventListener('click',pop);
+$('ebtn').addEventListener('click',()=>{editing=!editing;render();});
 
 (async()=>{
-  const c=localStorage.getItem(C);if(c){try{S=ps(new Uint8Array(JSON.parse(c)));}catch(e){}}
-  stk=[{v:'home'}];
-  try{render()}catch(e){console.error(e)}
-  try{const {b}=await api('/s');S=ps(b);localStorage.setItem(C,JSON.stringify([...b]));render()}catch(e){console.error(e)}
+  const c=localStorage.getItem(K_STA);
+  if(c)try{stations=parseStations(new Uint8Array(JSON.parse(c)));}catch(_){}
+  navStack=[{view:'home',params:{}}];
+  render();
+  try{
+    const bytes=await api('/s');
+    stations=parseStations(bytes);
+    localStorage.setItem(K_STA,JSON.stringify([...bytes]));
+    render();
+  }catch(_){}
 })();
-navigator.serviceWorker?.register('sw.js');
+
+'serviceWorker'in navigator&&navigator.serviceWorker.register('sw.js');
 </script>
 </html>
