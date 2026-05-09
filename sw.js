@@ -3,7 +3,7 @@ const SHELL_CACHE=V+'-shell';
 const API_CACHE=V+'-api';
 const SHELL=['./','./index.html','./manifest.json',
              './icon-192.png','./icon-512.png','./apple-touch-icon-180.png'];
-const API_ORIGIN='https://nt.sloccy.workers.dev';
+const API_ORIGIN='https://nt.sloccy.com';
 const bc=new BroadcastChannel('nt');
 
 self.oninstall=e=>e.waitUntil((async()=>{
