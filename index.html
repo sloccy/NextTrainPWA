@@ -81,6 +81,8 @@ input{background:var(--light);color:var(--fg);border:1px solid var(--light);padd
 const WORKER='https://nt.sloccy.com';
 const K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r',K_CACHE='nt_c';
 const CACHE_TTL=5*60*1000;
+const REFRESH_FLOOR_MS=2000;
+const REFRESH_FALLBACK_MS=60000;
 const DEC=new TextDecoder();
 const D2L={'0':'N','1':'S','2':'E','3':'W'};
 const L2D={'N':'0','S':'1','E':'2','W':'3'};
@@ -89,6 +91,7 @@ let stations=[],favs=[],recent=null,dark=false;
 let editing=false,navStack=[],arrCache={},refreshTimer=null;
 let subQueue=[],subActive=0,lastLoadTime=0,updTimer=null;
 const inflight=new Map();
+const lastNextRefresh=new Map();
 
 try{favs=JSON.parse(localStorage.getItem(K_FAV))||[];}catch(_){favs=[];}
 if(!Array.isArray(favs))favs=[];
@@ -125,6 +128,8 @@ async function api(path){
       try{
         const res=await fetch(WORKER+path,{signal:ctrl.signal});
         if(!res.ok)throw new Error(res.status);
+        const nr=res.headers.get('x-next-refresh');
+        lastNextRefresh.set(path,nr?Number(nr)*1000:null);
         return new Uint8Array(await res.arrayBuffer());
       }catch(e){lastErr=e;}
       finally{
@@ -593,26 +598,37 @@ function viewArrivals(L,params){
       arrCache[sta.s+rParam]={txt:'Next: '+(arrivals[0]?fmtTime(arrivals[0].mins)+' ('+arrivals[0].rn+')':'—'),cls:arrivals[0]?stLabel(arrivals[0].st).cls:'',rows:arrivals,t:Date.now()};
       saveCache();
       lastLoadTime=Date.now();
+      failCount=0;
       if(updTimer)clearInterval(updTimer);
       updTimer=setInterval(tickUpd,15000);
       tickUpd();
       renderArrivals(cont,arrivals,sta,rParam,rList);
     }catch(_){
+      failCount++;
       if(!cont.querySelector('.ar')&&!cont.querySelector('.row')){
         cont.innerHTML='<div class=p>Error loading arrivals</div>';
       }
     }
   };
 
-  load();
-  const np=netProfile();
-  refreshTimer=setInterval(load,np.refresh);
+  let failCount=0;
+  const aPath='/a?s='+sta.s+'&r='+rParam;
+  function scheduleNextLoad(){
+    clearTimeout(refreshTimer);
+    const nr=lastNextRefresh.get(aPath);
+    let delay;
+    if(!nr){
+      delay=failCount>0?Math.min(REFRESH_FALLBACK_MS,REFRESH_FLOOR_MS*(2**failCount)):REFRESH_FALLBACK_MS;
+    }else{
+      delay=Math.max(REFRESH_FLOOR_MS,nr-Date.now());
+    }
+    refreshTimer=setTimeout(()=>load().finally(scheduleNextLoad),delay);
+  }
+
+  load().finally(scheduleNextLoad);
 
   if(navigator.connection){
-    const onConnChange=()=>{
-      clearInterval(refreshTimer);
-      refreshTimer=setInterval(load,netProfile().refresh);
-    };
+    const onConnChange=()=>{load().finally(scheduleNextLoad);};
     navigator.connection.addEventListener('change',onConnChange);
     params._cleanConn=onConnChange;
   }
