@@ -1,7 +1,8 @@
-const V='nt-v4';
+const V='nt-v5';
 const SHELL_CACHE=V+'-shell';
 const API_CACHE=V+'-api';
 const SHELL=['./','./index.html','./manifest.json',
+             './fonts/ibm-plex-mono-400.woff2','./fonts/ibm-plex-mono-500.woff2','./fonts/dm-sans.woff2',
              './icon-192.png','./icon-512.png','./apple-touch-icon-180.png'];
 const API_ORIGIN='https://nt.sloccy.com';
 const bc=new BroadcastChannel('nt');
