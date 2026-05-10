@@ -43,19 +43,19 @@ body{
 }
 #app{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
 header{
-  background:var(--bnr);
+  background:var(--bg-2);
   padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
   cursor:pointer;z-index:10;
   display:flex;align-items:baseline;justify-content:space-between;
   border-bottom:2px solid var(--accent);
 }
 .hdr-wm{
-  font:700 26px/1 var(--dot);
+  font:800 30px/1 var(--dot);
   letter-spacing:.06em;text-transform:uppercase;
   color:var(--accent);
 }
 .hdr-rt{
-  font:400 11px/1 var(--dot);
+  font:700 13px/1 var(--dot);
   letter-spacing:.08em;text-transform:uppercase;
   color:var(--accent);opacity:.6;
 }
@@ -83,7 +83,7 @@ header{
 #ebtn{color:var(--fg-2)}
 #ebtn svg{fill:currentColor;stroke:none}
 #upd{
-  font:400 11px/1 var(--dot);
+  font:700 13px/1 var(--dot);
   letter-spacing:.06em;text-transform:uppercase;
   font-variant-numeric:tabular-nums;
   color:var(--fg-2);transition:color .3s;
@@ -151,7 +151,7 @@ input:focus{border-color:var(--accent)}
 .sec{
   display:flex;align-items:center;gap:10px;
   padding:16px 16px 8px;
-  font:500 13px/1 var(--dot);
+  font:700 15px/1 var(--dot);
   letter-spacing:.12em;text-transform:uppercase;
   color:var(--accent);
 }
@@ -210,7 +210,7 @@ input:focus{border-color:var(--accent)}
 #off{
   position:fixed;top:3px;left:0;right:0;
   background:var(--red);color:var(--bg);
-  text-align:center;font:500 13px/1 var(--dot);
+  text-align:center;font:700 15px/1 var(--dot);
   letter-spacing:.12em;text-transform:uppercase;
   padding:6px;z-index:12;display:none;
 }
