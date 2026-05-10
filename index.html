@@ -10,7 +10,7 @@
 <meta name=apple-mobile-web-app-title content=NextTrain>
 <link rel=manifest href=manifest.json>
 <link rel=apple-touch-icon href=apple-touch-icon-180.png>
-<link rel=preconnect href=https://nt.sloccy.com crossorigin>
+<link rel=preconnect href=https://nt.sloccy.workers.dev crossorigin>
 <title>NextTrain</title>
 <style>
 @font-face{font-family:'IBM Plex Mono';src:url(fonts/ibm-plex-mono-400.woff2)format('woff2');font-weight:400;font-display:swap}
@@ -250,7 +250,7 @@ input:focus{border-color:var(--accent)}
   <div id=list></div>
 </div>
 <script>
-const WORKER='https://nt.sloccy.com';
+const WORKER='https://nt.sloccy.workers.dev';
 const K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r',K_CACHE='nt_c';
 const CACHE_TTL=5*60*1000;
 const REFRESH_FLOOR_MS=2000;
@@ -1024,5 +1024,8 @@ try{
   }catch(_){}
 })();
 
-'serviceWorker'in navigator&&navigator.serviceWorker.register('sw.js');
+if('serviceWorker'in navigator){
+  navigator.serviceWorker.register('sw.js');
+  navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload());
+}
 </script>
