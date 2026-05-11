@@ -261,7 +261,7 @@ input:focus{border-color:var(--accent)}
 </div>
 <script>
 const WORKER='https://nt.sloccy.workers.dev';
-const K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r',K_CACHE='nt_c',K_INSTALL='nt_i';
+const K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r',K_CACHE='nt_c',K_INSTALL='nt_i',K_REC_DISMISS='nt_rd',K_SHOW_RECENT='nt_sr';
 const CACHE_TTL=5*60*1000;
 const REFRESH_FLOOR_MS=2000;
 const REFRESH_FALLBACK_MS=60000;
@@ -270,6 +270,7 @@ const D2L={'0':'N','1':'S','2':'E','3':'W'};
 const L2D={'N':'0','S':'1','E':'2','W':'3'};
 
 let stations=[],favs=[],recent=null;
+let recentDismissed=false,showRecent=true;
 let themeMode='auto',dark=false;
 let editing=false,navStack=[],arrCache={},refreshTimer=null;
 let deferredPrompt=null,wakeLock=null;
@@ -280,6 +281,8 @@ const lastNextRefresh=new Map();
 try{favs=JSON.parse(localStorage.getItem(K_FAV))||[];}catch(_){favs=[];}
 if(!Array.isArray(favs))favs=[];
 try{recent=JSON.parse(localStorage.getItem(K_REC));}catch(_){recent=null;}
+try{recentDismissed=localStorage.getItem(K_REC_DISMISS)==='1';}catch(_){recentDismissed=false;}
+try{const v=localStorage.getItem(K_SHOW_RECENT);showRecent=(v===null||v==='1');}catch(_){showRecent=true;}
 try{arrCache=JSON.parse(localStorage.getItem(K_CACHE))||{};}catch(_){arrCache={};}
 {const now=Date.now();for(const k of Object.keys(arrCache)){if(!arrCache[k].t||now-arrCache[k].t>3600000)delete arrCache[k];}}
 
@@ -708,12 +711,12 @@ function viewHome(L){
     if(!cached)enqueueSub(fav);
   });
 
-  if(recent){
+  if(recent && showRecent && !recentDismissed){
     try{
       const sec=document.createElement('div');sec.className='sec';sec.textContent='RECENT';
       L.appendChild(sec);
       const sta=stations.find(s=>s.s===recent.s);
-      const row=document.createElement('div');row.className='row';
+      const row=document.createElement('div');row.className='row';row.style.cssText='overflow:hidden;transition:transform .2s,opacity .2s';
       const img=document.createElement('img');
       img.className='ic';img.width=img.height=44;img.src=drawIcon(sta,recent);
       const tx=document.createElement('div');tx.className='tx';
@@ -721,7 +724,58 @@ function viewHome(L){
       const t2=document.createElement('div');t2.className='t2';t2.textContent='Tap to view';
       tx.appendChild(t1);tx.appendChild(t2);
       row.appendChild(img);row.appendChild(tx);
-      row.addEventListener('click',()=>push('arrivals',{sta,r:recent.r,routes:recent.routes}));
+
+      const dismissNow=()=>{
+        recentDismissed=true;
+        localStorage.setItem(K_REC_DISMISS,'1');
+        render();
+      };
+
+      let lpTimer=null,startX=0,startY=0,dx=0,swiped=false,pointerDown=false;
+      row.addEventListener('pointerdown',e=>{
+        startX=e.clientX;startY=e.clientY;dx=0;swiped=false;pointerDown=true;
+        lpTimer=setTimeout(async()=>{
+          hap(20);
+          const v=await showSheet([{label:'Dismiss',value:'dismiss',del:true}]);
+          if(v==='dismiss')dismissNow();
+        },500);
+      });
+      row.addEventListener('pointermove',e=>{
+        if(!pointerDown)return;
+        dx=e.clientX-startX;
+        const dy=e.clientY-startY;
+        if(!swiped&&Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)){
+          swiped=true;
+          clearTimeout(lpTimer);lpTimer=null;
+          row.setPointerCapture(e.pointerId);
+        }
+        if(swiped){
+          row.style.transition='none';
+          row.style.transform='translateX('+dx+'px)';
+          row.style.opacity=String(Math.max(0.4,1-Math.abs(dx)/300));
+        }
+      });
+      const endSwipe=()=>{
+        if(!pointerDown)return;
+        pointerDown=false;
+        clearTimeout(lpTimer);lpTimer=null;
+        if(swiped){
+          if(Math.abs(dx)>80){
+            row.style.transition='transform .2s,opacity .2s';
+            row.style.transform='translateX('+(dx>0?400:-400)+'px)';
+            row.style.opacity='0';
+            setTimeout(dismissNow,200);
+          }else{
+            row.style.transition='transform .2s,opacity .2s';
+            row.style.transform='translateX(0)';
+            row.style.opacity='1';
+          }
+        }
+      };
+      row.addEventListener('pointerup',endSwipe);
+      row.addEventListener('pointercancel',endSwipe);
+
+      row.addEventListener('click',()=>{if(swiped)return;push('arrivals',{sta,r:recent.r,routes:recent.routes});});
       L.appendChild(row);
     }catch(_){}
   }
@@ -769,6 +823,8 @@ function viewRoutes(L,params){
     const routes=params.sel.map(i=>({r:sta.r[i].n[0],d:L2D[sta.r[i].d]}));
     recent={s:sta.s,r:rParam,routes};
     localStorage.setItem(K_REC,JSON.stringify(recent));
+    recentDismissed=false;
+    localStorage.removeItem(K_REC_DISMISS);
     push('arrivals',{sta,r:rParam,routes});
   });
   (sta.r||[]).forEach((rt,idx)=>{
@@ -956,6 +1012,25 @@ function viewSettings(L){
   });
   tg.appendChild(label);tg.appendChild(seg);thRow.appendChild(tg);
   L.appendChild(thRow);
+
+  const srRow=document.createElement('div');srRow.className='row';
+  const srTg=document.createElement('div');srTg.className='tg';
+  const srLabel=document.createElement('span');srLabel.textContent='Show Last Search';
+  const srSeg=document.createElement('div');srSeg.className='theme-seg';
+  [{l:'On',v:true},{l:'Off',v:false}].forEach(({l,v},i)=>{
+    const btn=document.createElement('button');
+    btn.textContent=l;
+    if(showRecent===v)btn.className='on';
+    btn.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      showRecent=v;
+      localStorage.setItem(K_SHOW_RECENT,v?'1':'0');
+      srSeg.querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',j===i));
+    });
+    srSeg.appendChild(btn);
+  });
+  srTg.appendChild(srLabel);srTg.appendChild(srSeg);srRow.appendChild(srTg);
+  L.appendChild(srRow);
 
   const efRow=document.createElement('div');efRow.className='row act';efRow.textContent='Edit Favorites';
   efRow.addEventListener('click',()=>push('editFavs'));
