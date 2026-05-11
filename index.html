@@ -40,7 +40,9 @@ body{
   background:var(--bg);color:var(--fg);
   -webkit-tap-highlight-color:transparent;overscroll-behavior:none;
   background-image:radial-gradient(ellipse 120% 50% at 50% 0,var(--bg-2),transparent 60%);
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
 }
+input,textarea,[contenteditable=true]{-webkit-user-select:text;user-select:text;}
 #app{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
 header{
   background:var(--bg-2);
@@ -229,6 +231,14 @@ input:focus{border-color:var(--accent)}
 }
 .theme-seg button:last-child{border-right:none}
 .theme-seg button.on{background:var(--accent);color:var(--bnr)}
+.inst-banner{display:flex;align-items:center;padding:10px 16px;gap:12px;background:var(--accent-soft);border-bottom:1px solid var(--hairline)}
+.inst-banner-tx{flex:1}
+.inst-banner-t1{font:600 13px/1.2 var(--sans);color:var(--fg)}
+.inst-banner-t2{font:400 11px/1.3 var(--mono);letter-spacing:.04em;color:var(--fg-2);margin-top:2px}
+.inst-banner-btn{padding:6px 12px;background:var(--accent);color:var(--bnr);border:none;border-radius:3px;font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;flex-shrink:0;touch-action:manipulation}
+.inst-banner-x{width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--fg-2);cursor:pointer;flex-shrink:0;font:400 20px var(--sans);touch-action:manipulation}
+::view-transition-old(root),::view-transition-new(root){animation-duration:220ms}
+@media(prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation:none}}
 </style>
 <div id=bar></div>
 <div id=off>NO SIGNAL</div>
@@ -251,7 +261,7 @@ input:focus{border-color:var(--accent)}
 </div>
 <script>
 const WORKER='https://nt.sloccy.workers.dev';
-const K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r',K_CACHE='nt_c';
+const K_FAV='nt_f',K_DARK='nt_t',K_REC='nt_r',K_CACHE='nt_c',K_INSTALL='nt_i';
 const CACHE_TTL=5*60*1000;
 const REFRESH_FLOOR_MS=2000;
 const REFRESH_FALLBACK_MS=60000;
@@ -262,6 +272,7 @@ const L2D={'N':'0','S':'1','E':'2','W':'3'};
 let stations=[],favs=[],recent=null;
 let themeMode='auto',dark=false;
 let editing=false,navStack=[],arrCache={},refreshTimer=null;
+let deferredPrompt=null,wakeLock=null;
 let subQueue=[],subActive=0,lastLoadTime=0,updTimer=null;
 const inflight=new Map();
 const lastNextRefresh=new Map();
@@ -292,6 +303,32 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>
 });
 
 const $=id=>document.getElementById(id);
+
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const _ua=navigator.userAgent;
+const isIOS=/iPad|iPhone|iPod/.test(_ua)&&!window.MSStream;
+const isIOSSafari=isIOS&&/Safari/.test(_ua)&&!/CriOS|FxiOS|EdgiOS|OPiOS/.test(_ua);
+const isInAppBrowser=/FBAN|FBAV|Instagram|Line|Twitter|Pinterest|WhatsApp/.test(_ua);
+const canPromptAndroid=()=>deferredPrompt!==null;
+const canPromptIOS=()=>isIOSSafari&&!isStandalone();
+const installAvailable=()=>!isStandalone()&&!isInAppBrowser&&(canPromptAndroid()||canPromptIOS());
+function installBannerHidden(){
+  if(isStandalone())return true;
+  try{
+    const s=JSON.parse(localStorage.getItem(K_INSTALL)||'{}');
+    if(s.installed)return true;
+    if(s.dismissedAt&&Date.now()-s.dismissedAt<7*24*60*60*1000)return true;
+  }catch(_){}
+  return false;
+}
+async function acquireWake(){
+  if(!('wakeLock'in navigator))return;
+  try{wakeLock=await navigator.wakeLock.request('screen');}
+  catch(_){wakeLock=null;}
+}
+async function releaseWake(){
+  if(wakeLock){try{await wakeLock.release();}catch(_){}wakeLock=null;}
+}
 
 function netProfile(){
   const c=navigator.connection;
@@ -520,9 +557,53 @@ function showInput(label,def){
   });
 }
 
-function push(view,params){navStack.push({view,params:params||{}});render();}
-function pop(){if(navStack.length>1){navStack.pop();render();}}
-function reset(){navStack=[{view:'home',params:{}}];editing=false;render();}
+async function triggerInstall(){
+  hap(15);
+  if(canPromptAndroid()){
+    const p=deferredPrompt;deferredPrompt=null;
+    p.prompt();
+    const c=await p.userChoice;
+    if(c.outcome==='accepted')localStorage.setItem(K_INSTALL,JSON.stringify({installed:1}));
+    render();
+  }else if(canPromptIOS()){
+    showIOSInstall();
+  }
+}
+function showIOSInstall(){
+  const bg=document.createElement('div');bg.className='sheet-bg';
+  const sh=document.createElement('div');sh.className='sheet';
+  const hdr=document.createElement('div');
+  hdr.style.cssText='padding:16px 20px 8px;font:700 15px/1 var(--dot);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)';
+  hdr.textContent='ADD TO HOME SCREEN';
+  sh.appendChild(hdr);
+  const steps=[
+    ['<svg viewBox="0 0 24 24" width=20 height=20 fill=none stroke=currentColor stroke-width=2 stroke-linecap=round stroke-linejoin=round><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1=12 y1=2 x2=12 y2=15/></svg>','Tap the <strong>Share</strong> button'],
+    ['<svg viewBox="0 0 24 24" width=20 height=20 fill=none stroke=currentColor stroke-width=2 stroke-linecap=round stroke-linejoin=round><rect x=3 y=3 width=18 height=18 rx=2/><line x1=12 y1=8 x2=12 y2=16/><line x1=8 y1=12 x2=16 y2=12/></svg>','Select <strong>Add to Home Screen</strong>'],
+    ['<svg viewBox="0 0 24 24" width=20 height=20 fill=none stroke=currentColor stroke-width=2 stroke-linecap=round stroke-linejoin=round><polyline points="20 6 9 17 4 12"/></svg>','Tap <strong>Add</strong> in the top right']
+  ];
+  steps.forEach(([icon,text],i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--hairline);color:var(--fg)';
+    const num=document.createElement('div');
+    num.style.cssText='width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--bnr);display:flex;align-items:center;justify-content:center;font:700 12px var(--mono);flex-shrink:0';
+    num.textContent=i+1;
+    const ic=document.createElement('div');ic.innerHTML=icon;ic.style.cssText='flex-shrink:0;color:var(--fg-2);display:flex';
+    const tx2=document.createElement('div');tx2.innerHTML=text;tx2.style.cssText='font:400 14px/1.4 var(--sans)';
+    row.appendChild(num);row.appendChild(ic);row.appendChild(tx2);
+    sh.appendChild(row);
+  });
+  const got=document.createElement('div');got.className='s-item';got.textContent='Got it';
+  got.addEventListener('click',()=>document.body.removeChild(bg));
+  sh.appendChild(got);
+  bg.appendChild(sh);
+  bg.addEventListener('click',ev=>{if(ev.target===bg)document.body.removeChild(bg);});
+  document.body.appendChild(bg);
+}
+
+function tx(fn){if(document.startViewTransition)document.startViewTransition(fn);else fn();}
+function push(view,params){tx(()=>{navStack.push({view,params:params||{}});render();});}
+function pop(){if(navStack.length>1)tx(()=>{navStack.pop();render();});}
+function reset(){tx(()=>{navStack=[{view:'home',params:{}}];editing=false;render();});}
 function saveFavs(){localStorage.setItem(K_FAV,JSON.stringify(favs));}
 
 function tickUpd(){
@@ -535,6 +616,25 @@ function tickUpd(){
 }
 
 function viewHome(L){
+  if(installAvailable()&&!installBannerHidden()){
+    const iosp=canPromptIOS();
+    const banner=document.createElement('div');banner.className='inst-banner';
+    const btx=document.createElement('div');btx.className='inst-banner-tx';
+    const bt1=document.createElement('div');bt1.className='inst-banner-t1';bt1.textContent=iosp?'Add to Home Screen':'Install NextTrain';
+    const bt2=document.createElement('div');bt2.className='inst-banner-t2';bt2.textContent=iosp?'Tap Share → Add to Home Screen':'Get quick access from your home screen';
+    btx.appendChild(bt1);btx.appendChild(bt2);
+    const ibtn=document.createElement('button');ibtn.className='inst-banner-btn';ibtn.textContent=iosp?'How?':'Install';
+    ibtn.addEventListener('click',ev=>{ev.stopPropagation();triggerInstall();});
+    const xbtn=document.createElement('div');xbtn.className='inst-banner-x';xbtn.textContent='×';
+    xbtn.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      localStorage.setItem(K_INSTALL,JSON.stringify({dismissedAt:Date.now()}));
+      banner.remove();
+    });
+    banner.appendChild(btx);banner.appendChild(ibtn);banner.appendChild(xbtn);
+    banner.addEventListener('click',()=>triggerInstall());
+    L.appendChild(banner);
+  }
   if(favs.length){
     const sec=document.createElement('div');
     sec.className='sec';sec.textContent='FAVORITES';
@@ -874,6 +974,12 @@ function viewSettings(L){
     }
   });
   L.appendChild(rfRow);
+
+  if(!isStandalone()&&!isInAppBrowser&&installAvailable()){
+    const instRow=document.createElement('div');instRow.className='row act';instRow.textContent='Install App';
+    instRow.addEventListener('click',()=>triggerInstall());
+    L.appendChild(instRow);
+  }
 }
 
 function viewEditFavs(L){
@@ -959,6 +1065,8 @@ function render(){
   else if(view==='settings')viewSettings(L);
   else if(view==='editFavs')viewEditFavs(L);
 
+  if(view==='arrivals')acquireWake();else releaseWake();
+
   Array.from(L.children).slice(0,8).forEach((el,i)=>{
     el.classList.add('row-in');
     el.style.animationDelay=i*28+'ms';
@@ -1002,10 +1110,15 @@ updateOffline();
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
     if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}
+    releaseWake();
   }else if(navStack.length&&navStack[navStack.length-1].view==='arrivals'){
+    acquireWake();
     render();
   }
 });
+
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;render();});
+addEventListener('appinstalled',()=>{deferredPrompt=null;localStorage.setItem(K_INSTALL,JSON.stringify({installed:1}));render();});
 
 try{
   const swbc=new BroadcastChannel('nt');
