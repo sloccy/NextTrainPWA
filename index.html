@@ -6,10 +6,28 @@
 <meta name=theme-color media="(prefers-color-scheme: dark)" content="#0E0B08">
 <meta name=apple-mobile-web-app-capable content=yes>
 <meta name=mobile-web-app-capable content=yes>
-<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-status-bar-style content=default>
 <meta name=apple-mobile-web-app-title content=NextTrain>
+<meta name=format-detection content="telephone=no,date=no,address=no,email=no">
+<meta name=color-scheme content="light dark">
 <link rel=manifest href=manifest.json>
 <link rel=apple-touch-icon href=apple-touch-icon-180.png>
+<link rel=apple-touch-startup-image media="(device-width:430px) and (device-height:932px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:light)" href="splash/light-1290x2796.png">
+<link rel=apple-touch-startup-image media="(device-width:430px) and (device-height:932px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:dark)" href="splash/dark-1290x2796.png">
+<link rel=apple-touch-startup-image media="(device-width:393px) and (device-height:852px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:light)" href="splash/light-1179x2556.png">
+<link rel=apple-touch-startup-image media="(device-width:393px) and (device-height:852px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:dark)" href="splash/dark-1179x2556.png">
+<link rel=apple-touch-startup-image media="(device-width:428px) and (device-height:926px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:light)" href="splash/light-1284x2778.png">
+<link rel=apple-touch-startup-image media="(device-width:428px) and (device-height:926px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:dark)" href="splash/dark-1284x2778.png">
+<link rel=apple-touch-startup-image media="(device-width:390px) and (device-height:844px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:light)" href="splash/light-1170x2532.png">
+<link rel=apple-touch-startup-image media="(device-width:390px) and (device-height:844px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:dark)" href="splash/dark-1170x2532.png">
+<link rel=apple-touch-startup-image media="(device-width:375px) and (device-height:812px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:light)" href="splash/light-1125x2436.png">
+<link rel=apple-touch-startup-image media="(device-width:375px) and (device-height:812px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:dark)" href="splash/dark-1125x2436.png">
+<link rel=apple-touch-startup-image media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:light)" href="splash/light-1242x2688.png">
+<link rel=apple-touch-startup-image media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait) and (prefers-color-scheme:dark)" href="splash/dark-1242x2688.png">
+<link rel=apple-touch-startup-image media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait) and (prefers-color-scheme:light)" href="splash/light-828x1792.png">
+<link rel=apple-touch-startup-image media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait) and (prefers-color-scheme:dark)" href="splash/dark-828x1792.png">
+<link rel=apple-touch-startup-image media="(device-width:375px) and (device-height:667px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait) and (prefers-color-scheme:light)" href="splash/light-750x1334.png">
+<link rel=apple-touch-startup-image media="(device-width:375px) and (device-height:667px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait) and (prefers-color-scheme:dark)" href="splash/dark-750x1334.png">
 <link rel=preconnect href=https://nt.sloccy.workers.dev crossorigin>
 <title>NextTrain</title>
 <style>
@@ -92,7 +110,7 @@ header{
   flex-shrink:0;max-width:84px;text-align:right;padding-right:4px;
 }
 #upd.stale{color:var(--red)}
-#list{flex:1;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom)}
+#list{flex:1;overflow-y:auto;padding-bottom:max(env(safe-area-inset-bottom),12px);overscroll-behavior:contain}
 .p{padding:32px 20px;text-align:center;color:var(--fg-2);font:400 11px var(--mono);letter-spacing:.1em;text-transform:uppercase}
 .row{
   padding:14px 16px;border-bottom:1px solid var(--hairline);
@@ -1209,6 +1227,7 @@ try{
     const bytes=await api('/s');
     stations=parseStations(bytes);
     render();
+    if(new URLSearchParams(location.search).get('action')==='search')push('picker',{q:''});
   }catch(_){}
 })();
 

@@ -1,9 +1,17 @@
-const V='nt-v7';
+const V='nt-v8';
 const SHELL_CACHE=V+'-shell';
 const API_CACHE=V+'-api';
 const SHELL=['./','./index.html','./manifest.json',
              './fonts/ibm-plex-mono-400.woff2','./fonts/ibm-plex-mono-500.woff2','./fonts/dm-sans.woff2','./fonts/doto.woff2',
-             './icon-192.png','./icon-512.png','./apple-touch-icon-180.png'];
+             './icon-192.png','./icon-512.png','./apple-touch-icon-180.png',
+             './splash/light-1290x2796.png','./splash/dark-1290x2796.png',
+             './splash/light-1179x2556.png','./splash/dark-1179x2556.png',
+             './splash/light-1284x2778.png','./splash/dark-1284x2778.png',
+             './splash/light-1170x2532.png','./splash/dark-1170x2532.png',
+             './splash/light-1125x2436.png','./splash/dark-1125x2436.png',
+             './splash/light-1242x2688.png','./splash/dark-1242x2688.png',
+             './splash/light-828x1792.png','./splash/dark-828x1792.png',
+             './splash/light-750x1334.png','./splash/dark-750x1334.png'];
 const API_ORIGIN='https://nt.sloccy.workers.dev';
 const bc=new BroadcastChannel('nt');
 
