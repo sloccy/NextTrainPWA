@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang=en>
 <meta charset=utf-8>
-<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,interactive-widget=resizes-content">
 <meta name=theme-color media="(prefers-color-scheme: light)" content="#F2EBDC">
 <meta name=theme-color media="(prefers-color-scheme: dark)" content="#0E0B08">
 <meta name=apple-mobile-web-app-capable content=yes>
@@ -41,6 +41,7 @@ body{
   margin:0;font:400 16px/1.4 var(--sans);
   background:var(--bg);color:var(--fg);
   -webkit-tap-highlight-color:transparent;overscroll-behavior:none;
+  -webkit-text-size-adjust:100%;text-size-adjust:100%;
   background-image:radial-gradient(ellipse 120% 50% at 50% 0,var(--bg-2),transparent 60%);
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
 }
@@ -794,6 +795,8 @@ function viewHome(L){
 function viewPicker(L,params){
   const sb=document.createElement('div');sb.className='sb';
   const inp=document.createElement('input');
+  inp.type='search';inp.inputMode='search';inp.enterKeyHint='search';
+  inp.autocomplete='off';inp.autocorrect='off';inp.autocapitalize='off';inp.spellcheck=false;
   inp.placeholder='Search stations…';inp.value=params.q||'';
   sb.appendChild(inp);L.appendChild(sb);
   const ld=document.createElement('div');L.appendChild(ld);
@@ -1219,4 +1222,5 @@ if('serviceWorker'in navigator){
   navigator.serviceWorker.register('sw.js');
   navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload());
 }
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 </script>

@@ -1,4 +1,4 @@
-const V='nt-v10';
+const V='nt-v11';
 const SHELL_CACHE=V+'-shell';
 const API_CACHE=V+'-api';
 const SHELL=['./','./index.html','./manifest.json',
@@ -19,6 +19,9 @@ self.oninstall=e=>e.waitUntil((async()=>{
 })());
 
 self.onactivate=e=>e.waitUntil((async()=>{
+  if(self.registration.navigationPreload){
+    try{await self.registration.navigationPreload.enable();}catch(_){}
+  }
   const ks=await caches.keys();
   await Promise.all(ks.filter(k=>!k.startsWith(V)).map(k=>caches.delete(k)));
   await self.clients.claim();
@@ -39,8 +42,11 @@ self.onfetch=e=>{
 
   if(u.origin===location.origin&&e.request.mode==='navigate'){
     e.respondWith((async()=>{
-      try{return await withTimeout(e.request,3000);}
-      catch(_){return await caches.match('./index.html');}
+      try{
+        const preload=await e.preloadResponse;
+        if(preload)return preload;
+        return await withTimeout(e.request,3000);
+      }catch(_){return await caches.match('./index.html');}
     })());
     return;
   }
