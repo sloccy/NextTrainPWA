@@ -894,9 +894,9 @@ function renderArrivals(cont,arrivals,sta,rParam,rList){
     img.src=drawIcon(sta,{routes:[{r:arr.rn[0],d:L2D[arr.dir]||arr.dir}]});
     const info=document.createElement('div');
     const hsDiv=document.createElement('div');hsDiv.className='hs';hsDiv.textContent=route.h||'';
-    const stDiv=document.createElement('div');stDiv.className='st'+(cls?' '+cls:'');stDiv.textContent=lbl;
+    const stDiv=document.createElement('div');stDiv.className='st'+(cls?' '+cls:'');
+    stDiv.textContent=lbl+(arr.ats?' — At '+fmtSlug(arr.ats):'');
     info.appendChild(hsDiv);info.appendChild(stDiv);
-    if(arr.ats){const atsDiv=document.createElement('div');atsDiv.className='cd';atsDiv.textContent='At '+fmtSlug(arr.ats);info.appendChild(atsDiv);}
     left.appendChild(img);left.appendChild(info);
     const right=document.createElement('div');right.className='ar-r';
     const tm=document.createElement('div');tm.className='tm';tm.textContent=timeStr;
@@ -1122,7 +1122,7 @@ function viewAlerts(L){
       let iconSta=null,iconFav=null;
       for(const s of stations){
         const r=s.r.find(ro=>ro.n[0]===rt.name[0]);
-        if(r){iconSta=s;iconFav={routes:[{r:rt.name[0],d:L2D[r.d]}]};break;}
+        if(r){iconSta=s;iconFav={routes:[{r:rt.name[0],d:r.d}]};break;}
       }
       if(iconSta){const img=document.createElement('img');img.className='ic';img.width=img.height=44;img.src=drawIcon(iconSta,iconFav);row.appendChild(img);}
       const tx=document.createElement('div');tx.className='tx';
