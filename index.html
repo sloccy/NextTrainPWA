@@ -1119,6 +1119,12 @@ function viewAlerts(L){
     if(!routes.length){L.insertAdjacentHTML('beforeend','<div class=p>No active alerts</div>');return;}
     routes.forEach(rt=>{
       const row=document.createElement('div');row.className='row';
+      let iconSta=null,iconFav=null;
+      for(const s of stations){
+        const r=s.r.find(ro=>ro.n[0]===rt.name[0]);
+        if(r){iconSta=s;iconFav={routes:[{r:rt.name[0],d:L2D[r.d]}]};break;}
+      }
+      if(iconSta){const img=document.createElement('img');img.className='ic';img.width=img.height=44;img.src=drawIcon(iconSta,iconFav);row.appendChild(img);}
       const tx=document.createElement('div');tx.className='tx';
       const t1=document.createElement('div');t1.className='t1';t1.textContent=rt.name+' Line';
       const t2=document.createElement('div');t2.className='t2 r';t2.textContent=rt.count+' alert'+(rt.count===1?'':'s');
@@ -1139,7 +1145,7 @@ function viewAlertDetail(L,params){
       p+=8;p+=2;
       const hl=b[p++];
       const hdr=DEC.decode(b.subarray(p,p+hl));p+=hl;
-      const dl=(b[p]<<8)|b[p+1];p+=2;
+      const dl=b[p]|(b[p+1]<<8);p+=2;
       const desc=DEC.decode(b.subarray(p,p+dl));p+=dl;
       const card=document.createElement('div');
       card.style.cssText='padding:16px;border-bottom:1px solid var(--hairline)';
