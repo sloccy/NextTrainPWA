@@ -22,7 +22,7 @@
 :root{
   --bg:#F2EBDC;--bg-2:#E8DEC6;--fg:#1A1612;--fg-2:#6A6055;
   --hairline:#D4CAB4;--accent:#C46A1A;--accent-soft:rgba(196,106,26,.14);
-  --green:#3F7D2E;--red:#B53824;
+  --green:#3F7D2E;--red:#B53824;--orange:#c45000;
   --bnr:#1A1612;--bnrf:#F2EBDC;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   --sans:'DM Sans',system-ui,sans-serif;
@@ -32,7 +32,7 @@
 body.dk{
   --bg:#0E0B08;--bg-2:#181410;--fg:#F2EBDC;--fg-2:#9C8E76;
   --hairline:#2B241B;--accent:#FFB939;--accent-soft:rgba(255,185,57,.18);
-  --green:#6BD46B;--red:#FF6149;
+  --green:#6BD46B;--red:#FF6149;--orange:#ff8800;
   --bnr:#0E0B08;--bnrf:#FFB939;
   --shadow:0 1px 0 rgba(0,0,0,.4),0 12px 32px -12px rgba(0,0,0,.6);
 }
@@ -139,6 +139,7 @@ header{
 .st{font:400 11px/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;font-variant-numeric:tabular-nums;margin-top:4px}
 .st.g{color:var(--green)}
 .st.r{color:var(--red)}
+.st.o{color:var(--orange)}
 .cd{font:400 11px/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;font-variant-numeric:tabular-nums;color:var(--fg-2);margin-top:2px}
 .hs{font:400 14px/1.3 var(--sans);color:var(--fg-2)}
 #bar{position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);display:none;z-index:11;box-shadow:0 0 10px var(--accent-soft)}
@@ -398,7 +399,7 @@ function stLabel(st){
   if(st===-128)return{lbl:'CXLD',cls:'r'};
   if(st===-127)return{lbl:'SKIP',cls:'r'};
   if(st===-126)return{lbl:'ON TIME',cls:'g'};
-  if(st>0)return{lbl:'LATE',cls:'r'};
+  if(st>0)return{lbl:'LATE',cls:'o'};
   if(st<0)return{lbl:'EARLY',cls:'g'};
   return{lbl:'SCHED',cls:''};
 }
@@ -410,6 +411,8 @@ function fmtCountdown(predictedMins){
   if(d>=60)return Math.floor(d/60)+'h '+(d%60)+'m';
   return d+' MIN';
 }
+
+const fmtSlug=s=>s.replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
 
 function parseStations(b){
   if(!b||b.length<6)return[];
@@ -444,7 +447,8 @@ function parseArrivals(b){
       const dir=String.fromCharCode(b[p++]);
       const mins=(b[p++]<<8)|b[p++];
       const st=new Int8Array([b[p++]])[0];
-      out.push({rn,dir,mins,st});
+      const atsl=b[p++];const ats=atsl?DEC.decode(b.subarray(p,p+atsl)):'';p+=atsl;
+      out.push({rn,dir,mins,st,ats});
     }
   }catch(_){}
   return out;
@@ -783,6 +787,10 @@ function viewHome(L){
     }catch(_){}
   }
 
+  const al=document.createElement('div');al.className='row act';al.textContent='Alerts';
+  al.addEventListener('click',()=>push('alerts',{}));
+  L.appendChild(al);
+
   const ns=document.createElement('div');ns.className='row act';ns.textContent='+ New Search';
   ns.addEventListener('click',()=>push('picker',{q:''}));
   L.appendChild(ns);
@@ -888,6 +896,7 @@ function renderArrivals(cont,arrivals,sta,rParam,rList){
     const hsDiv=document.createElement('div');hsDiv.className='hs';hsDiv.textContent=route.h||'';
     const stDiv=document.createElement('div');stDiv.className='st'+(cls?' '+cls:'');stDiv.textContent=lbl;
     info.appendChild(hsDiv);info.appendChild(stDiv);
+    if(arr.ats){const atsDiv=document.createElement('div');atsDiv.className='cd';atsDiv.textContent='At '+fmtSlug(arr.ats);info.appendChild(atsDiv);}
     left.appendChild(img);left.appendChild(info);
     const right=document.createElement('div');right.className='ar-r';
     const tm=document.createElement('div');tm.className='tm';tm.textContent=timeStr;
@@ -1096,6 +1105,55 @@ function viewEditFavs(L){
   });
 }
 
+function viewAlerts(L){
+  const pl=document.createElement('div');pl.className='p';pl.textContent='Loading…';L.appendChild(pl);
+  api('/al').then(b=>{
+    pl.remove();
+    const count=b[0];let p=1,routes=[];
+    for(let i=0;i<count;i++){
+      const nl=b[p++];
+      const name=DEC.decode(b.subarray(p,p+nl));p+=nl;
+      const ac=b[p++];
+      if(ac>0)routes.push({name,count:ac});
+    }
+    if(!routes.length){L.insertAdjacentHTML('beforeend','<div class=p>No active alerts</div>');return;}
+    routes.forEach(rt=>{
+      const row=document.createElement('div');row.className='row';
+      const tx=document.createElement('div');tx.className='tx';
+      const t1=document.createElement('div');t1.className='t1';t1.textContent=rt.name+' Line';
+      const t2=document.createElement('div');t2.className='t2 r';t2.textContent=rt.count+' alert'+(rt.count===1?'':'s');
+      tx.appendChild(t1);tx.appendChild(t2);row.appendChild(tx);
+      row.addEventListener('click',()=>push('alert-detail',{route:rt.name}));
+      L.appendChild(row);
+    });
+  }).catch(()=>{pl.textContent='Error loading alerts';});
+}
+
+function viewAlertDetail(L,params){
+  const pl=document.createElement('div');pl.className='p';pl.textContent='Loading…';L.appendChild(pl);
+  api('/al?r='+encodeURIComponent(params.route)).then(b=>{
+    pl.remove();
+    const count=b[0];let p=1;
+    if(!count){L.insertAdjacentHTML('beforeend','<div class=p>No alerts</div>');return;}
+    for(let i=0;i<count;i++){
+      p+=8;p+=2;
+      const hl=b[p++];
+      const hdr=DEC.decode(b.subarray(p,p+hl));p+=hl;
+      const dl=(b[p]<<8)|b[p+1];p+=2;
+      const desc=DEC.decode(b.subarray(p,p+dl));p+=dl;
+      const card=document.createElement('div');
+      card.style.cssText='padding:16px;border-bottom:1px solid var(--hairline)';
+      const h=document.createElement('div');
+      h.style.cssText='font:600 14px/1.4 var(--sans);color:var(--fg);margin-bottom:8px';
+      h.textContent=hdr;
+      const d=document.createElement('div');
+      d.style.cssText='font:400 13px/1.5 var(--sans);color:var(--fg-2)';
+      d.textContent=desc;
+      card.appendChild(h);card.appendChild(d);L.appendChild(card);
+    }
+  }).catch(()=>{pl.textContent='Error loading alert details';});
+}
+
 async function fetchFavSub(fav){
   try{
     const bytes=await api('/a?s='+fav.s+'&r='+fav.r);
@@ -1132,7 +1190,9 @@ function render(){
     home:'',picker:'Select Station',
     routes:(params.sta&&params.sta.n)||'',
     arrivals:(params.sta&&params.sta.n)||(params.fav&&params.fav.n)||'',
-    settings:'Settings',editFavs:'Edit Favorites'
+    settings:'Settings',editFavs:'Edit Favorites',
+    alerts:'Alerts',
+    'alert-detail':(params.route||'')+' Line Alerts'
   };
   $('sub').textContent=titles[view]||'';
 
@@ -1144,6 +1204,8 @@ function render(){
   else if(view==='arrivals')viewArrivals(L,params);
   else if(view==='settings')viewSettings(L);
   else if(view==='editFavs')viewEditFavs(L);
+  else if(view==='alerts')viewAlerts(L);
+  else if(view==='alert-detail')viewAlertDetail(L,params);
 
   if(view==='arrivals')acquireWake();else releaseWake();
 

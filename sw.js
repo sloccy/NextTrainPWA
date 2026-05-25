@@ -1,4 +1,4 @@
-const V='nt-v11';
+const V='nt-v12';
 const SHELL_CACHE=V+'-shell';
 const API_CACHE=V+'-api';
 const SHELL=['./','./index.html','./manifest.json',
