@@ -412,7 +412,6 @@ function fmtCountdown(predictedMins){
   return d+' MIN';
 }
 
-const fmtSlug=s=>s.replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
 
 function parseStations(b){
   if(!b||b.length<6)return[];
@@ -447,8 +446,7 @@ function parseArrivals(b){
       const dir=String.fromCharCode(b[p++]);
       const mins=(b[p++]<<8)|b[p++];
       const st=new Int8Array([b[p++]])[0];
-      const atsl=b[p++];const ats=atsl?DEC.decode(b.subarray(p,p+atsl)):'';p+=atsl;
-      out.push({rn,dir,mins,st,ats});
+      out.push({rn,dir,mins,st});
     }
   }catch(_){}
   return out;
@@ -895,7 +893,7 @@ function renderArrivals(cont,arrivals,sta,rParam,rList){
     const info=document.createElement('div');
     const hsDiv=document.createElement('div');hsDiv.className='hs';hsDiv.textContent=route.h||'';
     const stDiv=document.createElement('div');stDiv.className='st'+(cls?' '+cls:'');
-    stDiv.textContent=lbl+(arr.ats?' — At '+fmtSlug(arr.ats):'');
+    stDiv.textContent=lbl;
     info.appendChild(hsDiv);info.appendChild(stDiv);
     left.appendChild(img);left.appendChild(info);
     const right=document.createElement('div');right.className='ar-r';
