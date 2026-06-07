@@ -278,7 +278,7 @@ let recentDismissed=false,showRecent=true;
 let themeMode='auto',dark=false;
 let editing=false,navStack=[],arrCache={},refreshTimer=null;
 let deferredPrompt=null,wakeLock=null;
-let subQueue=[],subActive=0,lastLoadTime=0,updTimer=null;
+let subQueue=[],subActive=0,lastLoadTime=0,updTimer=null,clockTimer=null;
 const inflight=new Map();
 const lastNextRefresh=new Map();
 
@@ -943,6 +943,15 @@ function viewArrivals(L,params){
 
   if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}
 
+  const staName=(sta&&sta.n)||(fav&&fav.n)||'';
+  function updateSubTime(){
+    const t=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    $('sub').textContent=staName+' · '+t;
+  }
+  if(clockTimer){clearInterval(clockTimer);clockTimer=null;}
+  updateSubTime();
+  clockTimer=setInterval(updateSubTime,30000);
+
   let ptrStart=0,ptrActive=false,spinner=null;
   spinner=document.createElement('div');spinner.className='ptr-spinner';
   L.style.position='relative';L.style.overflowY='auto';
@@ -1186,6 +1195,7 @@ function render(){
     }
   }
   if(updTimer&&view!=='arrivals'){clearInterval(updTimer);updTimer=null;$('upd').textContent='';}
+  if(clockTimer&&view!=='arrivals'){clearInterval(clockTimer);clockTimer=null;}
   if(view!=='home'){subQueue=[];}
 
   $('back').style.visibility=navStack.length>1?'visible':'hidden';
